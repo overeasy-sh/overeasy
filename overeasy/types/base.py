@@ -44,10 +44,6 @@ class FaceRecognitionModel(ABC):
         """
         pass
     
-    
-from abc import ABC, abstractmethod
-from PIL import Image
-
 class LLM(ABC):
     """
     Abstract class representing a language model

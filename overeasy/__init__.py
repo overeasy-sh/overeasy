@@ -2,6 +2,7 @@ from overeasy.agents import (
     Workflow, 
     BinaryChoiceAgent, 
     BoundingBoxSelectAgent, 
+    DenseCaptioningAgent,
     ClassificationAgent, 
     MultimodalLLM,
     LLM,

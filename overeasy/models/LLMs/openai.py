@@ -7,42 +7,17 @@ import io
 import base64
 import requests
 
-
 def encode_image_to_base64(image: Image.Image) -> str:
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-class GPT(LLM):
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo-preview"):
-        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key.")
-        self.model = model
-
-    def prompt(self, query: str) -> str:
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        payload = {
-            "model": self.model,
-            "prompt": query,
-            "max_tokens": 500
-        }
-
-        response = requests.post("https://api.openai.com/v1/completions", headers=headers, json=payload)
-        response_json = response.json()
-
-        return response_json['choices'][0]['message']['content'].strip()
-
-
 class GPT4Vision(MultimodalLLM, OCRModel):
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key.")
-        self.model = "gpt-4-vision-preview" 
+            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
+        self.model = "gpt-4-turbo" 
         
     def prompt_with_image(self, image: Image.Image, query: str) -> str:
         base64_image = encode_image_to_base64(image)
@@ -79,7 +54,21 @@ class GPT4Vision(MultimodalLLM, OCRModel):
 
 
     def prompt(self, query: str) -> str:
-        raise NotImplementedError("GPT4 Vision tokens are limited use the GPT model instead")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        payload = {
+            "model": self.model,
+            "prompt": query,
+            "max_tokens": 500
+        }
 
+        response = requests.post("https://api.openai.com/v1/completions", headers=headers, json=payload)
+        response_json = response.json()
+
+        return response_json['choices'][0]['message']['content'].strip()
+    
+    
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image.")

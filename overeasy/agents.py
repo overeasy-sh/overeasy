@@ -1,19 +1,16 @@
-from typing import List, Dict, Callable, Any, Tuple, Union, Optional
+from typing import List, Tuple, Optional
 from PIL import Image 
-from .models import GroundingDINO, QwenVL, GPT4Vision, CLIP
-from overeasy.server.image_viewer import make_server
-from abc import ABC, abstractmethod
+from overeasy.models import GroundingDINO, QwenVL, GPT4Vision, CLIP
 from dataclasses import dataclass, field
 from overeasy.types import *
 import numpy as np
 
 
-# Convert bounding_box_select into an agent class
-@dataclass
 class BoundingBoxSelectAgent(SplitAgent):
-    classes: List[str]
-    split: bool = False
-    model: BoundingBoxModel = GroundingDINO()
+    def __init__(self, classes: List[str], model: Optional[BoundingBoxModel] = None, split: bool = False):
+        self.classes = classes
+        self.model = model if model is not None else GroundingDINO()
+        self.split = split      
     
     def execute(self, image: Image.Image) -> ExecutionNode:
         return ExecutionNode(image, self.model.detect(image, self.classes))
@@ -33,7 +30,6 @@ class BoundingBoxSelectAgent(SplitAgent):
                 detection_type=DetectionType.CLASSIFICATION
             )
             
-            
             result.append(ExecutionNode(image.crop(detection.xyxy[0]), child_detection, parent_detection=detection))
             
         return result 
@@ -41,10 +37,11 @@ class BoundingBoxSelectAgent(SplitAgent):
     def is_split(self) -> bool:
         return self.split
     
-@dataclass
 class VisionPromptAgent(ImageAgent):
-    query: str
-    model: MultimodalLLM = GPT4Vision()
+    
+    def __init__(self, query: str, model: Optional[MultimodalLLM] = None):
+        self.query = query
+        self.model = model if model is not None else GPT4Vision()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""{self.query}"""
@@ -62,9 +59,11 @@ class VisionPromptAgent(ImageAgent):
 #         response = self.model.prompt_with_image(image, prompt)
 #         return ExecutionNode(image, response)
 
-@dataclass
+
 class DenseCaptioningAgent(ImageAgent):
-    model: MultimodalLLM = GPT4Vision()
+
+    def __init__(self, model: Optional[MultimodalLLM] = None):
+        self.model = model if model is not None else GPT4Vision()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""Describe the following image in detail"""
@@ -73,9 +72,9 @@ class DenseCaptioningAgent(ImageAgent):
 
 # Convert binary_choice into an agent class
 class BinaryChoiceAgent(ImageAgent):
-    def __init__(self, query: str, model:MultimodalLLM = QwenVL()):
+    def __init__(self, query: str, model:Optional[MultimodalLLM] = None):
         self.query = query
-        self.model = model
+        self.model = model if model is not None else QwenVL()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""{self.query}"""
@@ -102,34 +101,34 @@ class BinaryChoiceAgent(ImageAgent):
         return node
 
 class ClassificationAgent(ImageAgent):
-    def __init__(self, classes, model=CLIP()):
+    def __init__(self, classes, model: Optional[ClassificationModel] = None):
         self.classes = classes
-        self.model = model
+        self.model = model if model is not None else CLIP()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         selected_class = self.model.classify(image, self.classes)
         return ExecutionNode(image, selected_class)
 
 class OCRAgent(ImageAgent):
-    def __init__(self, model: OCRModel = GPT4Vision()):
-        self.model = model
+    def __init__(self, model: Optional[OCRModel] = None):
+        self.model = model if model is not None else GPT4Vision()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         response = self.model.parse_text(image)
         return ExecutionNode(image, response)
 
 class FacialRecognitionAgent(ImageAgent):
-    def __init__(self, model: MultimodalLLM = GPT4Vision()):
+    def __init__(self, model: Optional[MultimodalLLM] = None):
         self.prompt = "Identify the person in the image."
-        self.model = model
+        self.model = model if model is not None else GPT4Vision()
         
     def execute(self, image: Image.Image)-> ExecutionNode:
         return ExecutionNode(image, None)
         
 class JSONAgent(ImageAgent):
-    def __init__(self, query: str, model:MultimodalLLM = QwenVL()):
+    def __init__(self, query: str, model: Optional[MultimodalLLM] = None):
         self.query = query
-        self.model = model
+        self.model = model if model is not None else QwenVL()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""{self.query}"""
@@ -211,11 +210,6 @@ class Workflow:
     def add_step(self, agent: Agent):
         """Add a processing step to the workflow."""
         self.steps.append(agent)
-
-
-    def view(self, graph: ExecutionGraph):
-        app = make_server(graph, self.steps)
-        app.run(port=3000)
 
     # Return leaves of the graph and the graph itself
     def execute(self, input_image: Image.Image) -> Tuple[List[ExecutionNode], ExecutionGraph]:

@@ -4,23 +4,22 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-from matplotlib.figure import SubFigure
+from matplotlib.figure import SubFigure, Figure
 import matplotlib.gridspec as gridspec
 
-def visualize_graph(graph):  # Assume 'graph' is an ExecutionGraph object
-    """Visualize the execution graph of a workflow with improved legibility."""
-    layers = graph.top_sort()  # Assuming this method sorts nodes into layers
-    fig_height = 5 * len(layers)  # Set figure height based on the number of layers
-    fig = plt.figure(figsize=(8, fig_height), constrained_layout=True)  # Adjust figsize for vertical layout
-    subfigs = fig.subfigures(nrows=len(layers), ncols=1)  # Create subfigures stacked vertically
+def visualize_graph(graph) -> Figure:
+    layers = graph.top_sort()  
+    fig_height = 5 * len(layers) 
+    fig = plt.figure(figsize=(8, fig_height), constrained_layout=True)  
+    subfigs = fig.subfigures(nrows=len(layers), ncols=1) 
 
     for i, layer in enumerate(layers):
         subfig = subfigs[i]
-        subfig.suptitle(f'Layer {i}', y=0.95)  # Add subtitle for each subfigure
-        visualize_layer(layer, subfig)  # Pass the subfigure to visualize_layer
+        subfig.suptitle(f'Layer {i}', y=0.95)  
+        visualize_layer(layer, subfig)  
         
 
-    fig.tight_layout(pad=10.0)  # Add padding between subfigures
+    fig.tight_layout(pad=10.0)  
     return fig
 
 def visualize_layer(nodes: List[ExecutionNode], parent_fig: Optional[SubFigure]=None) -> SubFigure:
@@ -45,7 +44,7 @@ def visualize_layer(nodes: List[ExecutionNode], parent_fig: Optional[SubFigure]=
 
         for idx, (node, detection) in enumerate(zip(nodes, detections)):
             ax = parent_fig.add_subplot(gs[0, idx])
-            ax.imshow(node.image)  # Assuming each node has an 'image' attribute
+            ax.imshow(np.array(node.image))
             if detection.detection_type == DetectionType.BOUNDING_BOX:
                 for i, (box, cls_name, score) in enumerate(zip(detection.xyxy, detection.class_names, detection.confidence_scores)):
                     x1, y1, x2, y2 = box
@@ -94,10 +93,10 @@ def visualize_layer(nodes: List[ExecutionNode], parent_fig: Optional[SubFigure]=
         axs = parent_fig.subplots(1, len(nodes), squeeze=False)
 
         for idx, node in enumerate(nodes):
-            ax = axs[0, idx]
-            ax.imshow(node.image)  # Display the image
-            ax.axis('off')  # Hide axes for image subplot
-            data_str = str(node.data)  # Stringify the node's data
+            ax = axs[0][idx]
+            ax.imshow(np.array(node.image))
+            ax.axis('off')
+            data_str = str(node.data)
             ax.text(0.5, 0, data_str, transform=ax.transAxes, ha="center")  
 
         return parent_fig

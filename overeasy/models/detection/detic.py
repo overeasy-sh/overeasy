@@ -161,24 +161,3 @@ class DETIC(BoundingBoxModel):
             classes=self.classes,
             
         )
-        
-        
-        
-if __name__ == "__main__":
-    # Define the path to the image and the vocabulary
-    import os
-    dirname = os.path.dirname(__file__)
-    image_path = os.path.join(dirname, '../../../count_eggs.jpg')
-    vocabulary = ["egg"]
-
-    # Load the image
-    image = Image.open(image_path)
-
-    # Initialize the DETIC model with the specified vocabulary
-    detic_model = DETIC()
-
-    # Perform prediction
-    detections = detic_model.detect(image, vocabulary)
-
-    # Print the results
-    print("Detections:", detections)
