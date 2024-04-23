@@ -66,7 +66,7 @@ fig.savefig("workflow_result.png")
 
 ## Output
 
-<img src="example.png" alt="Input Image" width="200"/>
+<img src="example.png" alt="Input Image" width="500"/>
 
 ## Analysis
 
