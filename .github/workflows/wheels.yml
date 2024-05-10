@@ -48,7 +48,6 @@ jobs:
           path: dist/*.tar.gz
 
   upload_pypi:
-    environment: prod
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     environment: pypi
