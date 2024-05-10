@@ -15,6 +15,8 @@ jobs:
     environment: prod
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      CIBW_BUILD: "cp39-* cp310-* cp311-*" 
     strategy:
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
