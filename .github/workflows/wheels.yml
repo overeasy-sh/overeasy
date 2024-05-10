@@ -13,25 +13,23 @@ on:
 jobs:
   build_wheels:
     environment: prod
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    env:
-      CIBW_BUILD: "cp39-* cp310-* cp311-*" 
-    strategy:
-      matrix:
-        # macos-13 is an intel runner, macos-14 is apple silicon
-        os: [ubuntu-latest, windows-latest, macos-13]
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
-          
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'  # or any version you're targeting
+
+      - name: Build wheel
+        run: |
+          python -m pip install build
+          python -m build --wheel --outdir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: pure-python-wheels
           path: ./wheelhouse/*.whl
 
   build_sdist:

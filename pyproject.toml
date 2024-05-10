@@ -1,11 +1,26 @@
 [tool.poetry]
 name = "overeasy"
-version = "0.0.1"
-description = ""
 authors = ["Ani Rahul <anirahul@redshiftai.app>"]
-license = "MIT"
-readme = "README.md"
+description = "Overeasy is a vision framework for building, training, and deploying models."
+version = "0.0.1"
 
+[project]
+name = "overeasy"
+version = "0.0.1"
+description = "Overeasy is a vision framework for building, training, and deploying models."
+authors = [
+    { name = "Ani Rahul", email = "anirahul@redshiftai.app" },
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+homepage = "https://overeasy.sh/"
+repository = "https://github.com/overeasy-sh/overeasy"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.13"
@@ -42,5 +57,5 @@ post_install = "overeasy.models.detection.detic:check_dependencies"
 
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
