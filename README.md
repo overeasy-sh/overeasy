@@ -1,8 +1,8 @@
-# 🎉 Announcing Overeasy v.1.0 
+# 🎉 Announcing Overeasy v.0.0.1 
 
-This repository contains code for **Overeasy v.1.0**, a framework designed for constructing multi-step visual workflows. This library is engineered to simplify complex computer vision tasks by breaking them down into manageable, sequential operations. This methodology enhances the performance of models while boosting their interpretability.
+This repository contains code for **Overeasy**, a framework designed for constructing multi-step visual workflows. This library is engineered to simplify complex computer vision tasks by breaking them down into manageable, sequential operations. This methodology enhances the performance of models while boosting their interpretability.
 
-Overeasy v.1.0 focuses on `object detection` and `classification`.
+Overeasy v0 focuses on `object detection` and `classification`.
 
 # Key Components
 
