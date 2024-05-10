@@ -1,3 +1,4 @@
 from .dino import GroundingDINO, GroundingDINOModel
-# from .yoloworld import YOLOWorld
 from .detic import DETIC
+from .yoloworld import YOLOWorld
+from .owlv2 import OwlV2

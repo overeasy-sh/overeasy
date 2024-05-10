@@ -159,5 +159,4 @@ class DETIC(BoundingBoxModel):
             class_ids=np.array(pred_classes),
             confidence=np.array(pred_scores),
             classes=self.classes,
-            
         )

@@ -220,17 +220,18 @@ class Detections:
                 },
                 detection_type=DetectionType.BOUNDING_BOX
             )
-
+        masks = extract_ultralytics_masks(ultralytics_results)
+        
         class_id = ultralytics_results.boxes.cls.cpu().numpy().astype(int)
         class_names = np.array([ultralytics_results.names[i] for i in class_id])
         return cls(
             xyxy=ultralytics_results.boxes.xyxy.cpu().numpy(),
             confidence=ultralytics_results.boxes.conf.cpu().numpy(),
             class_ids=class_id,
-            masks=extract_ultralytics_masks(ultralytics_results),
+            masks=masks,
             classes = class_names,
             data={},
-            detection_type=DetectionType.SEGMENTATION
+            detection_type=DetectionType.BOUNDING_BOX if masks is None else DetectionType.SEGMENTATION
         )
 
     @classmethod
@@ -428,8 +429,8 @@ class Detections:
 
 
     def __getitem__(
-        self, index: Union[int, slice, List[int], np.ndarray, str]
-    ) -> Union['Detections', List, np.ndarray, None]:
+        self, index: Union[int, slice, List[int], np.ndarray]
+    ) -> 'Detections':
         """
         Get a subset of the Detections object or access an item from its data field.
 
@@ -461,8 +462,6 @@ class Detections:
             feature_vector = detections['feature_vector']
             ```
         """
-        if isinstance(index, str):
-            return self.data.get(index)
         if isinstance(index, int):
             index = [index]
         return Detections(
