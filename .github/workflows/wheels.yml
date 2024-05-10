@@ -12,7 +12,6 @@ on:
 
 jobs:
   build_wheels:
-    environment: prod
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +32,6 @@ jobs:
           path: ./wheelhouse/*.whl
 
   build_sdist:
-    environment: prod
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +48,7 @@ jobs:
   upload_pypi:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: prod
     permissions:
       id-token: write
     if: github.event_name == 'release' && github.event.action == 'published'

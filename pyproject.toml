@@ -1,9 +1,3 @@
-[tool.poetry]
-name = "overeasy"
-authors = ["Ani Rahul <anirahul@redshiftai.app>"]
-description = "Overeasy is a vision framework for building, training, and deploying models."
-version = "0.0.1"
-
 [project]
 name = "overeasy"
 version = "0.0.1"
@@ -21,6 +15,14 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
+# placeholders
+[tool.poetry]
+name = "overeasy"
+authors = ["Ani Rahul <anirahul@redshiftai.app>"]
+description = ""
+version = "0.0.0"
+
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.13"
