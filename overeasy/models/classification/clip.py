@@ -8,6 +8,7 @@ class CLIP(ClassificationModel):
     def __init__(self):
         self.processor = AutoProcessor.from_pretrained("openai/clip-vit-large-patch14")
         self.model = AutoModelForZeroShotImageClassification.from_pretrained("openai/clip-vit-large-patch14")
+        self.model.eval()
 
     def classify(self, image: Image.Image, classes: list) -> str:
         inputs = self.processor(text=classes, images=image, return_tensors="pt", padding=True)
