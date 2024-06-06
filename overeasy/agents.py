@@ -1,10 +1,13 @@
 from typing import List, Tuple, Optional
 from PIL import Image 
-from overeasy.models import GroundingDINO, QwenVL, GPT4Vision, CLIP
+from overeasy.models import YOLOWorld, QwenVL, GPT4Vision, CLIP
 from dataclasses import dataclass, field
+from overeasy.models import OwlV2, GroundingDINO
 from overeasy.types import *
 import numpy as np
-
+from pydantic import BaseModel
+import instructor
+from openai import OpenAI
 
 class BoundingBoxSelectAgent(SplitAgent):
     def __init__(self, classes: List[str], model: Optional[BoundingBoxModel] = None, split: bool = False):
@@ -36,6 +39,14 @@ class BoundingBoxSelectAgent(SplitAgent):
     
     def is_split(self) -> bool:
         return self.split
+
+    def __repr__(self):
+        code_snippet = f"workflow.add_step(BoundingBoxSelectAgent(classes=[{', '.join(self.classes)}], "
+        code_snippet += f"model={self.model}" if self.model else ""
+        code_snippet += f", split={self.split}))"
+            
+        return f"workflow.add_step(BoundingBoxSelectAgent(classes=[{', '.join(self.classes)}], model={self.model}, split={self.split}))"
+
     
 class VisionPromptAgent(ImageAgent):
     
@@ -100,6 +111,9 @@ class BinaryChoiceAgent(ImageAgent):
 
         return node
 
+    def __repr__(self):
+        return f"workflow.add_step(BinaryChoiceAgent('{self.query}'))"
+
 class ClassificationAgent(ImageAgent):
     def __init__(self, classes, model: Optional[ClassificationModel] = None):
         self.classes = classes
@@ -124,16 +138,34 @@ class FacialRecognitionAgent(ImageAgent):
         
     def execute(self, image: Image.Image)-> ExecutionNode:
         return ExecutionNode(image, None)
-        
+
+import base64, io        
 class JSONAgent(ImageAgent):
-    def __init__(self, query: str, model: Optional[MultimodalLLM] = None):
-        self.query = query
-        self.model = model if model is not None else QwenVL()
+    def __init__(self, response_model: type[BaseModel], model: Optional[MultimodalLLM] = None):
+        self.model = model if model is not None else GPT4Vision()
+        self.response_model = response_model
 
     def execute(self, image: Image.Image)-> ExecutionNode:
-        prompt = f"""{self.query}"""
-        response = self.model.prompt_with_image(image, prompt)
-        return ExecutionNode(image, response)
+        client = instructor.from_openai(OpenAI())
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+        # Extract structured data from natural language
+        structured_response: Any = client.chat.completions.create(
+            model="gpt-4o",
+            response_model=self.response_model,
+            messages=[{"role": "user", "content": [
+                {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_image}"
+                            }
+                }
+                ]}],
+        )
+
+        return ExecutionNode(image, structured_response)
     
     
 # class FunctionAgent(Agent):
@@ -200,6 +232,9 @@ class JoinAgent(Agent):
         
 
         return leaves
+
+    def __repr__(self):
+        return "workflow.add_step(JoinAgent())"
   
 
 
@@ -213,8 +248,13 @@ class Workflow:
 
     # Return leaves of the graph and the graph itself
     def execute(self, input_image: Image.Image) -> Tuple[List[ExecutionNode], ExecutionGraph]:
+        if input_image is None:
+            raise ValueError("Input image is None")
+        elif isinstance(input_image, np.ndarray):
+            input_image = Image.fromarray(input_image)
+        elif not isinstance(input_image, Image.Image):
+            raise ValueError("Input image is not a valid image format")
         
-        # intermediate_results: List[Tuple[ImageNode, List[Detections]]] = [(ImageNode(input_image), [])]
         root = ExecutionNode(input_image, None)
         graph = ExecutionGraph(root)
 
