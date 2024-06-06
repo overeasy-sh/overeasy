@@ -35,14 +35,9 @@ class YOLOWorld(BoundingBoxModel):
         model_path = get_yoloworld_model(model)
         self.model = YOLOWorld_ultralytics(model_path)
 
-    def detect(self, image: Image.Image, classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
+    def detect(self, image: Image.Image, classes: List[str], box_threshold=0, text_threshold=0) -> Detections:
         self.model.set_classes(classes)
-
-        results = self.model.predict(image)
-        
-        print("YOLO WORLD LEN, ", len(results))
+        results = self.model.predict(image, verbose=False)
         detections = Detections.from_ultralytics(results[0])
-
-        # detections = detections[detections.confidence > box_threshold]
-
+        detections = detections[detections.confidence > box_threshold]
         return detections
