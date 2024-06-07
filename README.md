@@ -1,4 +1,4 @@
-# 🎉 Announcing Overeasy v.0.0.1 
+# 🎉 Announcing Overeasy v.0.0.3 
 
 This repository contains code for **Overeasy**, a framework designed for constructing multi-step visual workflows. This library is engineered to simplify complex computer vision tasks by breaking them down into manageable, sequential operations. This methodology enhances the performance of models while boosting their interpretability.
 
