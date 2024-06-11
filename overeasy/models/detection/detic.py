@@ -111,17 +111,18 @@ def check_dependencies():
         subprocess.run(["wget", model_url, "-O", model_path])
 
     os.chdir(original_dir)
-
-
 check_dependencies()
+
+
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import _apply_exif_orientation
 from detectron2.utils.logger import setup_logger
 
 
-
 class DETIC(BoundingBoxModel):
-
+    def __init__(self):
+        self.classes = None
+        
     def set_classes(self, classes: List[str]):
         original_dir = os.getcwd()
         sys.path.insert(0, HOME + "/.overeasy/Detic/third_party/CenterNet2/")
@@ -134,17 +135,15 @@ class DETIC(BoundingBoxModel):
             os.chdir(original_dir)
         
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
-        if self.classes is not None and not np.array_equal(self.classes, classes):
+        if self.classes is None:
+            self.set_classes(classes)
+        elif not np.array_equal(self.classes, classes):
             self.set_classes(classes)
         
         if isinstance(image, Image.Image):
             image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
         predictions, visualized_output = self.detic_model.run_on_image(np.array(image))
-
-        visualized_image_path = "visualized_output.jpg"
-        cv2.imwrite(visualized_image_path, visualized_output.get_image()[:, :, ::-1])
-
         pred_boxes = predictions["instances"].pred_boxes.tensor.cpu().numpy()
         pred_classes = predictions["instances"].pred_classes.cpu().numpy()
         pred_scores = predictions["instances"].scores.cpu().numpy()
@@ -160,3 +159,4 @@ class DETIC(BoundingBoxModel):
             confidence=np.array(pred_scores),
             classes=self.classes,
         )
+

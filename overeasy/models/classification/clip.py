@@ -1,6 +1,8 @@
+from typing import Literal, Optional
 from transformers import AutoProcessor, AutoModelForZeroShotImageClassification
 from PIL import Image
-from overeasy.types import ClassificationModel
+import numpy as np
+from overeasy.types import Detections, DetectionType, ClassificationModel
 import open_clip
 import torch
 
@@ -10,12 +12,19 @@ class CLIP(ClassificationModel):
         self.model = AutoModelForZeroShotImageClassification.from_pretrained("openai/clip-vit-large-patch14")
         self.model.eval()
 
-    def classify(self, image: Image.Image, classes: list) -> str:
+    def classify(self, image: Image.Image, classes: list) -> Detections:
         inputs = self.processor(text=classes, images=image, return_tensors="pt", padding=True)
         outputs = self.model(**inputs).logits_per_image
-        # Get the class with the smallest distance
-        min_distance_class = classes[outputs.argmin()]
-        return min_distance_class
+        softmax_outputs = torch.nn.functional.softmax(outputs, dim=-1).detach().numpy()
+        index = softmax_outputs.argmax()
+        return Detections(
+            xyxy=np.zeros((1, 4)),
+            class_ids=np.array([index]),
+            confidence= np.array([softmax_outputs[0, index]]),
+            classes=np.array(classes),
+            detection_type=DetectionType.CLASSIFICATION
+        )
+
     
 class OpenCLIPBase(ClassificationModel):
     def __init__(self, model_name):
@@ -24,7 +33,7 @@ class OpenCLIPBase(ClassificationModel):
         self.model = model
         self.preprocess = preprocess_val
 
-    def classify(self, image: Image.Image, classes: list) -> str:
+    def classify(self, image: Image.Image, classes: list) -> Detections:
         image = self.preprocess(image).unsqueeze(0)
         text = self.tokenizer(classes, padding=True, return_tensors="pt")
 
@@ -35,13 +44,22 @@ class OpenCLIPBase(ClassificationModel):
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
             text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-            min_distance_class = classes[text_probs.argmin()]
+            index = text_probs.argmax()
+            confidence = text_probs[0, index]
+            return Detections(
+                xyxy=np.zeros((1, 4)),
+                class_ids=np.array([index]),
+                confidence=np.array([confidence]),
+                classes=np.array(classes),
+                detection_type=DetectionType.CLASSIFICATION
+            )
 
-        return min_distance_class
-
+# models = ["laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K", "hf-hub:laion/CLIP-ViT-bigG-14-laion2B-39B-b160k"]
 class LaionCLIP(OpenCLIPBase):
-    def __init__(self):
-        super().__init__('hf-hub:laion/CLIP-ViT-H-14-laion2B-s32B-b79K')
+    def __init__(self, model_name: Optional[Literal["laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K", "hf-hub:laion/CLIP-ViT-bigG-14-laion2B-39B-b160k"]]):
+        if model_name is None:
+            model_name = "laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K"
+        super().__init__(model_name)
 
 class BiomedCLIP(OpenCLIPBase):
     def __init__(self):

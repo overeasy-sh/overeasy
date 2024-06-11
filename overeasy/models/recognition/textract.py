@@ -3,7 +3,7 @@ from PIL import Image
 from overeasy.types import OCRModel
 import io
 
-class TextractModel(OCRModel):
+class Textract(OCRModel):
     def __init__(self):
         self.client = boto3.client('textract')
 

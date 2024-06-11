@@ -1,6 +1,4 @@
-import logging
 import time
-import collections
 from tabulate import tabulate
 from functools import wraps
 from collections import defaultdict

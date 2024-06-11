@@ -8,13 +8,12 @@ readme = "README.md"
 
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.13"
+python = ">=3.10, <3.13"
 torch = "^2.0.0"
-boto3 = "^1.34.29"
 numpy = "^1.24.3"
 opencv-python-headless = "^4.7.0"
 Pillow = "^10.2.0"
-requests = "^2.31.0"
+requests = "^2.32.0"
 matplotlib = "^3.8.1"
 anthropic = "^0.25.0"
 openai = "^1.12.0"
@@ -34,6 +33,8 @@ einops = "^0.6.0"
 transformers-stream-generator = "0.0.3"
 accelerate = "^0.27.0"
 instructor = "^1.3.2"
+gradio = "4.25.0"
+boto3 = "^1.34.121"
 
 [tool.poetry.scripts]
 post_install = "overeasy.models.detection.detic:check_dependencies"

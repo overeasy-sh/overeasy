@@ -1,4 +1,4 @@
-from .openai import GPT4Vision
+from .openai import GPT, GPTVision
 from .qwenvl import QwenVL
 from .gemini import Gemini
 from .anthropic import Claude

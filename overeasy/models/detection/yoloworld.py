@@ -41,3 +41,4 @@ class YOLOWorld(BoundingBoxModel):
         detections = Detections.from_ultralytics(results[0])
         detections = detections[detections.confidence > box_threshold]
         return detections
+    

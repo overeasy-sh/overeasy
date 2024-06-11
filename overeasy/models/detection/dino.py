@@ -11,7 +11,7 @@ from enum import Enum
 from overeasy.types import BoundingBoxModel
 from overeasy.logging import log_time
 import warnings
-
+import sys, io
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
 
@@ -158,7 +158,12 @@ class GroundingDINO(BoundingBoxModel):
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):
-        self.grounding_dino_model = load_grounding_dino(model=type)
+        original_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            self.grounding_dino_model = load_grounding_dino(model=type)
+        finally:
+            sys.stdout = original_stdout
         self.box_threshold = box_threshold
         self.text_threshold = text_threshold
         
@@ -188,9 +193,9 @@ class GroundingDINO(BoundingBoxModel):
 
             detections_list.append(detections)
         
-        
         detections = combine_detections(
             detections_list, classes=classes, overwrite_class_ids=range(len(detections_list))
         )
 
         return detections
+

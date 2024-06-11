@@ -1,2 +1,2 @@
-from .textract import TextractModel
-from .rekognition import RekognitionModel
+from .textract import Textract
+from .rekognition import Rekognition
