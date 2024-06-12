@@ -5,9 +5,6 @@ import tempfile
 from overeasy.logging import log_time
 from overeasy.types import MultimodalLLM
 
-# Note: The default behavior now has injection attack prevention off.
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
-
 # use bf16
 # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, bf16=True).eval()
 # use fp16

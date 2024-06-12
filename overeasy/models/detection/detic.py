@@ -19,6 +19,7 @@ CONFIDENCE_THRESHOLD = 0.3
 def setup_cfg(args):
     from centernet.config import add_centernet_config
     from detic.config import add_detic_config
+    from detectron2.config import get_cfg
 
     cfg = get_cfg()
     cfg.MODEL.DEVICE = "cpu" if args.cpu else "cuda"
@@ -38,6 +39,10 @@ def setup_cfg(args):
 
 
 def load_detic_model(classes : List[str]):
+    from detectron2.data.detection_utils import _apply_exif_orientation
+    from detectron2.utils.logger import setup_logger
+    from detic.predictor import VisualizationDemo
+
     mp.set_start_method("spawn", force=True)
     setup_logger(name="fvcore")
 
@@ -57,7 +62,6 @@ def load_detic_model(classes : List[str]):
     args.pred_all_class = False
     cfg = setup_cfg(args)
 
-    from detic.predictor import VisualizationDemo
 
     # https://github.com/facebookresearch/Detic/blob/main/detic/predictor.py#L39
     demo = VisualizationDemo(cfg, args)
@@ -69,7 +73,7 @@ HOME = os.path.expanduser("~")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def check_dependencies():
-    # Create the ~/.cache/autodistill directory if it doesn't exist
+
     original_dir = os.getcwd()
     autodistill_dir = os.path.expanduser("~/.overeasy")
     os.makedirs(autodistill_dir, exist_ok=True)
@@ -111,16 +115,15 @@ def check_dependencies():
         subprocess.run(["wget", model_url, "-O", model_path])
 
     os.chdir(original_dir)
-check_dependencies()
 
 
-from detectron2.config import get_cfg
-from detectron2.data.detection_utils import _apply_exif_orientation
-from detectron2.utils.logger import setup_logger
+
 
 
 class DETIC(BoundingBoxModel):
     def __init__(self):
+        check_dependencies()
+        
         self.classes = None
         
     def set_classes(self, classes: List[str]):
