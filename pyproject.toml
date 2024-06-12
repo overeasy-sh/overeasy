@@ -38,6 +38,7 @@ boto3 = "^1.34.121"
 vertexai = "^1.49.0"
 groq = "^0.9.0"
 litellm = "^1.40.9"
+jsonref = "^1.1.0"
 
 [tool.poetry.scripts]
 post_install = "overeasy.models.detection.detic:check_dependencies"
