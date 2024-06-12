@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "overeasy"
-version = "0.0.3"
+version = "0.0.4"
 description = ""
 authors = ["Ani Rahul <anirahul@redshiftai.app>"]
 license = "MIT"
@@ -12,7 +12,7 @@ python = ">=3.10, <3.13"
 torch = "^2.0.0"
 numpy = "^1.24.3"
 opencv-python-headless = "^4.7.0"
-Pillow = "^10.2.0"
+Pillow = "^10.3.0"
 requests = "^2.32.0"
 matplotlib = "^3.8.1"
 anthropic = "^0.25.0"
