@@ -4,6 +4,8 @@ from PIL import Image
 import tempfile
 from overeasy.logging import log_time
 from overeasy.types import MultimodalLLM
+from typing import Literal
+import importlib
 
 # use bf16
 # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, bf16=True).eval()
@@ -12,34 +14,87 @@ from overeasy.types import MultimodalLLM
 # use cpu only
 # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="cpu", trust_remote_code=True).eval()
 # use cuda device
-def load_model():
-    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="cuda", trust_remote_code=True).eval()
-    model.generation_config = GenerationConfig.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True,)
+
+def setup_autogptq():
+    import subprocess
+    import torch
+
+    # Check if CUDA is available
+    if not torch.cuda.is_available():
+        print("CUDA is not available. Exiting installation.")
+        return
+
+    # Get CUDA version from PyTorch
+    cuda_version = torch.version.cuda
+    print(f"CUDA version: {cuda_version}")
+    if cuda_version:
+        if cuda_version.startswith("11.8"):
+            subprocess.run([
+                "pip", "install", "auto-gptq", "--no-build-isolation",
+                "--extra-index-url", "https://huggingface.github.io/autogptq-index/whl/cu118/"
+            ], check=True)
+        elif cuda_version.startswith("12.1"):
+            subprocess.run([
+                "pip", "install", "auto-gptq", "--no-build-isolation"
+            ], check=True)
+        else:
+            print(f"Unsupported CUDA version: {cuda_version}")
+    else:
+        print("CUDA version could not be determined.")
+        
+
+model_type = Literal["base", "int4", "fp16"]
+def load_model(model_type: model_type):
+    if model_type == "base":
+        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True).eval()
+    elif model_type == "fp16":
+        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, fp16=True).eval()
+    elif model_type == "int4":
+        setup_autogptq()
+        def is_autogptq_installed():
+            package_name = 'auto_gptq'
+            spec = importlib.util.find_spec(package_name)
+            return spec is not None
+
+        if not is_autogptq_installed():
+            raise Exception("AutoGPTQ is not installed can't use int4 quantization")
+        
+        model = AutoModelForCausalLM.from_pretrained(
+            "Qwen/Qwen-VL-Chat-Int4",
+            device_map="auto",
+            trust_remote_code=True
+        ).eval()
+        
+    # model.generation_config = GenerationConfig.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
+    
     return model
 
 class QwenVL(MultimodalLLM):
-    def __init__(self):
-        self.model = load_model()
-        self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
+    def __init__(self, model: model_type = "int4"):
+        self.model = load_model(model)
+        if model == "int4":
+            self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat-Int4", trust_remote_code=True)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
         
     @log_time
     def prompt_with_image(self, image : Image.Image, query: str) -> str:
 
         with tempfile.NamedTemporaryFile(suffix=".png") as temp_file:
             image.save(temp_file.name)
-            query = tokenizer.from_list_format([
+            query = self.tokenizer.from_list_format([
                 {'image': temp_file.name},
                 {'text': query},
             ])
-            response, history = self.model.chat(tokenizer, query=query, history=None)
+            response, history = self.model.chat(self.tokenizer, query=query, history=None, max_new_tokens=2048)
             return response
 
     @log_time
     def prompt(self, query: str) -> str:
-        query = tokenizer.from_list_format([
+        query = self.tokenizer.from_list_format([
             {'text': query},
         ])
-        response, history = self.model.chat(tokenizer, query=query, history=None)
+        response, history = self.model.chat(self.tokenizer, query=query, history=None, max_new_tokens=2048)
         return response
 
     def draw_bbox_on_latest_picture(self, response, history):

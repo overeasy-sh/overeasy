@@ -1,3 +1,4 @@
+import os
 import urllib.request
 import cv2
 import numpy as np
@@ -11,15 +12,11 @@ from overeasy.types import BoundingBoxModel
 from overeasy.logging import log_time
 import warnings
 import sys, io
-import os
-import cv2
-
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if DEVICE.type != 'cuda':
-    warnings.warn("Warning: CUDA is not available. DINO will run on CPU, which may result in slower performance.")
+if torch.cuda.is_available():
+    print("WARNING: CUDA not available. GroundingDINO will run very slowly.")
 
 class GroundingDINOModel(Enum):
     Pretrain_1_8M = "pretrain"
@@ -87,11 +84,6 @@ def load_grounding_dino(model: GroundingDINOModel):
 
         return grounding_dino_model
     
-    
-    
-
-
-    
 def combine_detections(detections_list: List[Detections], classes: List[str], overwrite_class_ids=None):
     if len(detections_list) == 0:
         return Detections.empty()
@@ -150,7 +142,7 @@ class GroundingDINO(BoundingBoxModel):
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):
-        # Redirect grounding dino setup output to a string
+        # Redirect grounding dino output to string
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()
         try:

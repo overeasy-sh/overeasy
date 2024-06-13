@@ -11,6 +11,7 @@ from typing import List
 from PIL import Image
 import cv2
 from overeasy.types import BoundingBoxModel
+import subprocess
 
 VOCAB = "custom"
 CONFIDENCE_THRESHOLD = 0.3
@@ -39,12 +40,7 @@ def setup_cfg(args):
 
 
 def load_detic_model(classes : List[str]):
-    from detectron2.data.detection_utils import _apply_exif_orientation
-    from detectron2.utils.logger import setup_logger
-    from detic.predictor import VisualizationDemo
-
     mp.set_start_method("spawn", force=True)
-    setup_logger(name="fvcore")
 
     args = argparse.Namespace()
 
@@ -61,8 +57,9 @@ def load_detic_model(classes : List[str]):
     args.custom_vocabulary = ", ".join(classes).rstrip(",")
     args.pred_all_class = False
     cfg = setup_cfg(args)
+    print("SETUP CONFIGIIGGIG")
 
-
+    from detic.predictor import VisualizationDemo
     # https://github.com/facebookresearch/Detic/blob/main/detic/predictor.py#L39
     demo = VisualizationDemo(cfg, args)
 
@@ -73,48 +70,27 @@ HOME = os.path.expanduser("~")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def check_dependencies():
-
-    original_dir = os.getcwd()
-    autodistill_dir = os.path.expanduser("~/.overeasy")
-    os.makedirs(autodistill_dir, exist_ok=True)
-
-    os.chdir(autodistill_dir)
-
     try:
         import detectron2
     except:
         subprocess.run(
-            ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
-        )
+        ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
+    )
+    overeasy_dir = os.path.expanduser("~/.overeasy")
+    os.makedirs(overeasy_dir, exist_ok=True)
 
-    # Check if Detic is installed
-    detic_path = os.path.join(autodistill_dir, "Detic")
+    os.chdir(overeasy_dir)
 
-    if not os.path.isdir(detic_path):
-        subprocess.run(
-            [
-                "git",
-                "clone",
-                "https://github.com/facebookresearch/Detic.git",
-                "--recurse-submodules",
-            ]
-        )
+    models_dir = os.path.join(overeasy_dir, "Detic", "weights")
+    os.makedirs(models_dir, exist_ok=True)
 
-        os.chdir(detic_path)
-
-        subprocess.run(["pip", "install", "-r", "requirements.txt"])
-
-        models_dir = os.path.join(detic_path, "models")
-
-        os.makedirs(models_dir, exist_ok=True)
-
+    fname = "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+    download_dir = os.path.join(models_dir, fname)
+    if not os.path.exists(download_dir):
         model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-        model_path = os.path.join(
-            models_dir, "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-        )
-        subprocess.run(["wget", model_url, "-O", model_path])
+        subprocess.run(["wget", model_url, "-O", download_dir])
 
-    os.chdir(original_dir)
+
 
 
 
@@ -123,19 +99,13 @@ def check_dependencies():
 class DETIC(BoundingBoxModel):
     def __init__(self):
         check_dependencies()
-        
         self.classes = None
         
     def set_classes(self, classes: List[str]):
-        original_dir = os.getcwd()
-        sys.path.insert(0, HOME + "/.overeasy/Detic/third_party/CenterNet2/")
-        sys.path.insert(0, HOME + "/.overeasy/Detic/")
         self.classes = classes
-        try :
-            os.chdir(HOME + "/.overeasy/Detic/")
-            self.detic_model = load_detic_model(classes)
-        finally:
-            os.chdir(original_dir)
+        self.detic_model = load_detic_model(classes)
+
+
         
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
         if self.classes is None:
