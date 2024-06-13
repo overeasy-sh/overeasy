@@ -40,71 +40,112 @@ def setup_cfg(args):
 
 
 def load_detic_model(classes : List[str]):
-    mp.set_start_method("spawn", force=True)
+    original_dir = os.getcwd()
+    try:
+        sys.path.insert(0, HOME + "/.cache/overeasy/Detic/third_party/CenterNet2/")
+        sys.path.insert(0, HOME + "/.cache/overeasy/Detic/")
+        os.chdir(HOME + "/.cache/overeasy/Detic/")
 
-    args = argparse.Namespace()
+        mp.set_start_method("spawn", force=True)
 
-    args.confidence_threshold = CONFIDENCE_THRESHOLD
-    args.vocabulary = VOCAB
-    args.opts = []
-    args.config_file = "configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml"
-    args.cpu = False if torch.cuda.is_available() else True
-    args.opts.append("MODEL.WEIGHTS")
-    args.opts.append("models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth")
-    args.output = None
-    args.webcam = None
-    args.video_input = None
-    args.custom_vocabulary = ", ".join(classes).rstrip(",")
-    args.pred_all_class = False
-    cfg = setup_cfg(args)
-    print("SETUP CONFIGIIGGIG")
+        args = argparse.Namespace()
 
-    from detic.predictor import VisualizationDemo
-    # https://github.com/facebookresearch/Detic/blob/main/detic/predictor.py#L39
-    demo = VisualizationDemo(cfg, args)
+        args.confidence_threshold = CONFIDENCE_THRESHOLD
+        args.vocabulary = VOCAB
+        args.opts = []
+        args.config_file = "configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml"
+        args.cpu = False if torch.cuda.is_available() else True
+        args.opts.append("MODEL.WEIGHTS")
+        args.opts.append("models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth")
+        args.output = None
+        args.webcam = None
+        args.video_input = None
+        args.custom_vocabulary = ", ".join(classes).rstrip(",")
+        args.pred_all_class = False
+        cfg = setup_cfg(args)
 
-    return demo
+        from detic.predictor import VisualizationDemo
+        # https://github.com/facebookresearch/Detic/blob/main/detic/predictor.py#L39
+        demo = VisualizationDemo(cfg, args)
+        return demo
+    finally:
+        sys.path.remove(HOME + "/.cache/overeasy/Detic/third_party/CenterNet2/")
+        sys.path.remove(HOME + "/.cache/overeasy/Detic/")
+        os.chdir(original_dir)
+
 
 
 HOME = os.path.expanduser("~")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def check_dependencies():
+    # Create the ~/.cache/overeasy directory if it doesn't exist
+    original_dir = os.getcwd()
+    overeasy_dir = os.path.expanduser("~/.cache/overeasy")
+    os.makedirs(overeasy_dir, exist_ok=True)
+
     try:
         import detectron2
     except:
         subprocess.run(
-        ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
-    )
-    overeasy_dir = os.path.expanduser("~/.overeasy")
-    os.makedirs(overeasy_dir, exist_ok=True)
+            ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
+        )
+            
+    try:
+        os.chdir(overeasy_dir)
+        # Check if Detic is installed
+        detic_path = os.path.join(overeasy_dir, "Detic")
+        models_dir = os.path.join(detic_path, "models")
+        model_path = os.path.join(
+            models_dir, "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+        )
+        if not os.path.isdir(detic_path):
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "https://github.com/facebookresearch/Detic.git",
+                    "--recurse-submodules",
+                ]
+            )
 
-    os.chdir(overeasy_dir)
+            os.chdir(detic_path)
 
-    models_dir = os.path.join(overeasy_dir, "Detic", "weights")
-    os.makedirs(models_dir, exist_ok=True)
-
-    fname = "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-    download_dir = os.path.join(models_dir, fname)
-    if not os.path.exists(download_dir):
-        model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-        subprocess.run(["wget", model_url, "-O", download_dir])
+            subprocess.run(["pip", "install", "-r", "requirements.txt"])
 
 
+            os.makedirs(models_dir, exist_ok=True)
 
+            model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+            
+            subprocess.run(["wget", model_url, "-O", model_path])
+            
+        config_dir = os.path.join(detic_path, "configs", "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml")
+        return model_path, config_dir
+    finally:
+        os.chdir(original_dir)
 
 
 
 
 class DETIC(BoundingBoxModel):
     def __init__(self):
-        check_dependencies()
+        self.weights_dir, self.config_dir = check_dependencies()
+        
         self.classes = None
         
     def set_classes(self, classes: List[str]):
         self.classes = classes
+        try:
+            import detectron2
+        except:
+            subprocess.run(
+            ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
+        )
         self.detic_model = load_detic_model(classes)
+        
 
+        
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
         if self.classes is None:
             self.set_classes(classes)

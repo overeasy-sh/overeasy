@@ -26,14 +26,15 @@ def setup_autogptq():
 
     # Get CUDA version from PyTorch
     cuda_version = torch.version.cuda
-    print(f"CUDA version: {cuda_version}")
     if cuda_version:
         if cuda_version.startswith("11.8"):
+            subprocess.run(["pip", "install", "optimum"], check=True)
             subprocess.run([
                 "pip", "install", "auto-gptq", "--no-build-isolation",
                 "--extra-index-url", "https://huggingface.github.io/autogptq-index/whl/cu118/"
             ], check=True)
         elif cuda_version.startswith("12.1"):
+            subprocess.run(["pip", "install", "optimum"], check=True)
             subprocess.run([
                 "pip", "install", "auto-gptq", "--no-build-isolation"
             ], check=True)
@@ -50,12 +51,14 @@ def load_model(model_type: model_type):
     elif model_type == "fp16":
         model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, fp16=True).eval()
     elif model_type == "int4":
-        setup_autogptq()
         def is_autogptq_installed():
             package_name = 'auto_gptq'
             spec = importlib.util.find_spec(package_name)
             return spec is not None
 
+        if not is_autogptq_installed():
+            setup_autogptq()
+        
         if not is_autogptq_installed():
             raise Exception("AutoGPTQ is not installed can't use int4 quantization")
         
