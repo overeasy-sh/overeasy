@@ -105,8 +105,6 @@ class DETIC(BoundingBoxModel):
         self.classes = classes
         self.detic_model = load_detic_model(classes)
 
-
-        
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
         if self.classes is None:
             self.set_classes(classes)
