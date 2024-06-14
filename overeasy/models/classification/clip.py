@@ -7,11 +7,19 @@ import open_clip
 import torch
 
 class CLIP(ClassificationModel):
-    def __init__(self):
-        self.processor = AutoProcessor.from_pretrained("openai/clip-vit-large-patch14")
-        self.model = AutoModelForZeroShotImageClassification.from_pretrained("openai/clip-vit-large-patch14")
+    def __init__(self, model_card: str = "openai/clip-vit-large-patch14"):
+        self.model_card = model_card
+
+    def load_resources(self):
+        self.processor = AutoProcessor.from_pretrained(self.model_card)
+        self.model = AutoModelForZeroShotImageClassification.from_pretrained(self.model_card)
         self.model.eval()
 
+    def release_resources(self):
+        del self.model
+        del self.processor
+        torch.cuda.empty_cache()
+        
     def classify(self, image: Image.Image, classes: list) -> Detections:
         inputs = self.processor(text=classes, images=image, return_tensors="pt", padding=True)
         outputs = self.model(**inputs).logits_per_image
@@ -28,10 +36,19 @@ class CLIP(ClassificationModel):
     
 class OpenCLIPBase(ClassificationModel):
     def __init__(self, model_name):
-        model, _, preprocess_val = open_clip.create_model_and_transforms(model_name)
-        self.tokenizer = open_clip.get_tokenizer(model_name)
+        self.model_name = model_name
+        
+    def load_resources(self):
+        model, _, preprocess_val = open_clip.create_model_and_transforms(self.model_name)
+        self.tokenizer = open_clip.get_tokenizer(self.model_name)
         self.model = model
         self.preprocess = preprocess_val
+
+    def release_resources(self):
+        del self.model
+        del self.tokenizer
+        del self.preprocess
+        torch.cuda.empty_cache()
 
     def classify(self, image: Image.Image, classes: list) -> Detections:
         image = self.preprocess(image).unsqueeze(0)

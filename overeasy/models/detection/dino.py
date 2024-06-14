@@ -15,8 +15,7 @@ import sys, io
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
 
-if torch.cuda.is_available():
-    print("WARNING: CUDA not available. GroundingDINO will run very slowly.")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class GroundingDINOModel(Enum):
     Pretrain_1_8M = "pretrain"
@@ -142,19 +141,29 @@ class GroundingDINO(BoundingBoxModel):
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):
+        if not torch.cuda.is_available():
+            warnings.warn("CUDA not available. GroundingDINO will run very slowly.")
+
+        self.box_threshold = box_threshold
+        self.text_threshold = text_threshold
+        self.model_type = type
+        
+    def load_resources(self):
         # Redirect grounding dino output to string
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()
         try:
-            self.grounding_dino_model = load_grounding_dino(model=type)
+            self.grounding_dino_model = load_grounding_dino(model=self.model_type)
         except Exception as e:
             print(f"Error loading GroundingDINO model: {e}")
             print(sys.stdout.getvalue())
         finally:
             sys.stdout = original_stdout
-        self.box_threshold = box_threshold
-        self.text_threshold = text_threshold
-        
+            
+    def release_resources(self):
+        del self.grounding_dino_model
+        torch.cuda.empty_cache()
+    
     @log_time
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=None, text_threshold=None) -> Detections:
         if box_threshold is None:

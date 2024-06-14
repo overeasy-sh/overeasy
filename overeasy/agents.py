@@ -12,6 +12,7 @@ import gradio as gr
 from math import sqrt
 from .visualize_utils import annotate
 import base64, io, os
+from typing import Union, Dict
 
 class BoundingBoxSelectAgent(ImageAgent):
     def __init__(self, classes: List[str], model: Optional[BoundingBoxModel] = None):
@@ -40,12 +41,16 @@ class VisionPromptAgent(ImageAgent):
         return f"{self.__class__.__name__}(query={self.query}, model={model_name})"
     
 class DenseCaptioningAgent(ImageAgent):
-    def __init__(self, model: Optional[MultimodalLLM] = None):
+    def __init__(self, model: Optional[Union[MultimodalLLM, CaptioningModel]] = None):
         self.model = model if model is not None else GPTVision()
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""Describe the following image in detail"""
-        response = self.model.prompt_with_image(image, prompt)
+        if isinstance(self.model, MultimodalLLM):
+            response = self.model.prompt_with_image(image, prompt)
+        else:
+            response = self.model.caption(image)
+            
         return ExecutionNode(image, response)
 
     def __repr__(self):
@@ -410,51 +415,56 @@ class Workflow:
 
         intermediate_results = [root]
         for ind, agent in enumerate(self.steps):
-            if isinstance(agent, JoinAgent):
-                intermediate_results = agent.join(intermediate_results, graph)
-            elif isinstance(agent, SplitAgent):
-                res = []
-                for node in intermediate_results:
-                    children : List[ExecutionNode] = agent.execute(node)
-                    res.extend(children)
-                    for _child in children:
-                        graph.add_child(node, _child)
-                intermediate_results = res
-            elif isinstance(agent, ImageAgent):
-                res = []
-                for node in intermediate_results:
-                    child: ExecutionNode = agent.execute(node.image)
-                    graph.add_child(node, child)
-                    res.append(child)
-                intermediate_results = res
-            elif isinstance(agent, TextAgent):
-                res = []
-                for node in intermediate_results:
-                    if isinstance(node.data, Detections):
-                        raise ValueError("TextAgent cannot be used with must have stringable input")
-                    response = agent.execute(str(node.data))
-                    child = ExecutionNode(node.image, response)
-                    graph.add_child(node, child)
-                    res.append(child)
-                intermediate_results = res
-            elif isinstance(agent, DetectionAgent):
-                res = []
-                for node in intermediate_results:
-                    output_detection: Detections = agent.execute(node.data)
-                    child = ExecutionNode(node.image, output_detection)
-                    graph.add_child(node, child)
-                    res.append(child)
-                intermediate_results = res
-            elif isinstance(agent, DataAgent):
-                res = []
-                for node in intermediate_results:
-                    child = agent.execute(node)
-                    graph.add_child(node, child)
-                    res.append(child)
-                intermediate_results = res
-            else:
-                raise TypeError(f"Unsupported agent type: {type(agent)}")
-                              
+            if hasattr(agent, 'model') and isinstance(agent.model, Model):
+                agent.model.load_resources()
+            try:
+                if isinstance(agent, JoinAgent):
+                        intermediate_results = agent.join(intermediate_results, graph)
+                elif isinstance(agent, SplitAgent):
+                    res = []
+                    for node in intermediate_results:
+                        children : List[ExecutionNode] = agent.execute(node)
+                        res.extend(children)
+                        for _child in children:
+                            graph.add_child(node, _child)
+                    intermediate_results = res
+                elif isinstance(agent, ImageAgent):
+                    res = []
+                    for node in intermediate_results:
+                        child: ExecutionNode = agent.execute(node.image)
+                        graph.add_child(node, child)
+                        res.append(child)
+                    intermediate_results = res
+                elif isinstance(agent, TextAgent):
+                    res = []
+                    for node in intermediate_results:
+                        if isinstance(node.data, Detections):
+                            raise ValueError("TextAgent cannot be used with must have stringable input")
+                        response = agent.execute(str(node.data))
+                        child = ExecutionNode(node.image, response)
+                        graph.add_child(node, child)
+                        res.append(child)
+                    intermediate_results = res
+                elif isinstance(agent, DetectionAgent):
+                    res = []
+                    for node in intermediate_results:
+                        output_detection: Detections = agent.execute(node.data)
+                        child = ExecutionNode(node.image, output_detection)
+                        graph.add_child(node, child)
+                        res.append(child)
+                    intermediate_results = res
+                elif isinstance(agent, DataAgent):
+                    res = []
+                    for node in intermediate_results:
+                        child = agent.execute(node)
+                        graph.add_child(node, child)
+                        res.append(child)
+                    intermediate_results = res
+                else:
+                    raise TypeError(f"Unsupported agent type: {type(agent)}")
+            finally:
+                if hasattr(agent, 'model') and isinstance(agent.model, Model):
+                    agent.model.release_resources()
         return intermediate_results, graph
     
 

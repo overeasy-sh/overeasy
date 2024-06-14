@@ -8,34 +8,22 @@ from overeasy.visualize_utils import annotate
 from dataclasses import dataclass
 from collections import defaultdict
 
-# OCRModel reads text from an image
-class OCRModel(ABC):
-    @abstractmethod
-    def parse_text(self, image: Image.Image) -> str:
-        pass
-
-# TODO: Return type needs to be fleshed out
-# class FaceRecognitionModel(ABC):
-#     @abstractmethod
-#     def detect_faces(self, image: Image.Image) -> list:
-#         pass
-    
-class LLM(ABC):    
-    @abstractmethod
-    def prompt(self, query: str) -> str:
-        pass
-    
-class MultimodalLLM(LLM):
-    
-    @abstractmethod
-    def prompt_with_image(self, image: Image.Image, query: str) -> str:
-        pass
-    
-
-class BoundingBoxModel(ABC):
-    @abstractmethod
-    def detect(self, image: Image.Image, classes: List[str]) -> Detections:
-        pass
+__all__ = [
+    "OCRModel",
+    "LLM",
+    "MultimodalLLM",
+    "BoundingBoxModel",
+    "ExecutionNode",
+    "ExecutionGraph",
+    "Model",
+    "Agent",
+    "ImageAgent",
+    "DetectionAgent",
+    "TextAgent",
+    "DataAgent",
+    "ClassificationModel",
+    "CaptioningModel",
+]
     
 from matplotlib import pyplot as plt
 import numpy as np
@@ -166,6 +154,48 @@ class ExecutionGraph:
         
         return sorted_nodes
 
+class Model(ABC):
+    # Load model resources, such as allocating memory for weights, only once when this method is called.
+    # Note: Weights can still be downloaded to disk, just not allocated to VRAM until load_resources is called.
+    @abstractmethod
+    def load_resources(self):
+        pass
+    
+    # Free up the allocated resources, such as memory for weights, when this method is called.
+    @abstractmethod
+    def release_resources(self):
+        pass
+    
+# OCRModel reads text from an image
+class OCRModel(Model):
+    @abstractmethod
+    def parse_text(self, image: Image.Image) -> str:
+        pass
+    
+class LLM(Model):    
+    @abstractmethod
+    def prompt(self, query: str) -> str:
+        pass
+    
+class MultimodalLLM(LLM):
+    @abstractmethod
+    def prompt_with_image(self, image: Image.Image, query: str) -> str:
+        pass
+
+class CaptioningModel(Model):
+    @abstractmethod
+    def caption(self, image: Image.Image) -> str:
+        pass
+    
+class BoundingBoxModel(Model):
+    @abstractmethod
+    def detect(self, image: Image.Image, classes: List[str]) -> Detections:
+        pass
+    
+class ClassificationModel(Model):
+    @abstractmethod
+    def classify(self, image: Image.Image, classes: list) -> Detections:
+        pass
 
 class Agent(ABC):
     pass
@@ -188,11 +218,4 @@ class TextAgent(Agent):
 class DataAgent(Agent):
     @abstractmethod
     def execute(self, node: ExecutionNode) -> ExecutionNode:
-        pass
-
-
-
-class ClassificationModel(ABC):
-    @abstractmethod
-    def classify(self, image: Image.Image, classes: list) -> Detections:
         pass

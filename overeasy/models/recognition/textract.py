@@ -31,3 +31,9 @@ class Textract(OCRModel):
                 text.append(item['Text'])
 
         return ' '.join(text)
+
+    def load_resources(self):
+        super().load_resources()
+
+    def release_resources(self):
+        super().release_resources()

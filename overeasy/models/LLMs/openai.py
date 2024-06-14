@@ -1,7 +1,7 @@
 import openai
 import os
 from PIL import Image
-from overeasy.types import MultimodalLLM, LLM, OCRModel
+from overeasy.types import MultimodalLLM, LLM, OCRModel, Model
 from typing import Literal, Optional
 import io
 import base64
@@ -64,6 +64,12 @@ class GPT(LLM):
     def prompt(self, query: str) -> str:
         return _prompt(self, query, self.model)
     
+    def load_resources(self):
+        super().load_resources()
+    
+    def release_resources(self):
+        super().release_resources()
+    
 class GPTVision(MultimodalLLM, OCRModel):
     def __init__(self, api_key: Optional[str] = None,
                  model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
@@ -106,10 +112,14 @@ class GPTVision(MultimodalLLM, OCRModel):
         
         return response_json['choices'][0]['message']['content'].strip()
 
-
     def prompt(self, query: str) -> str:
         return _prompt(self, query, self.model)
     
-    
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image.")
+    
+    def load_resources(self):
+        super().load_resources()
+    
+    def release_resources(self):
+        super().release_resources()

@@ -32,8 +32,14 @@ def get_yoloworld_model(model: str) -> str:
 class YOLOWorld(BoundingBoxModel):
     
     def __init__(self, model: str = "yolov8l-worldv2"):
-        model_path = get_yoloworld_model(model)
-        self.model = YOLOWorld_ultralytics(model_path)
+        self.model_path = get_yoloworld_model(model)
+
+    def load_resources(self):
+        self.model = YOLOWorld_ultralytics(self.model_path)
+
+    def release_resources(self):
+        del self.model
+        torch.cuda.empty_cache()
 
     def detect(self, image: Image.Image, classes: List[str], box_threshold=0, text_threshold=0) -> Detections:
         self.model.set_classes(classes)

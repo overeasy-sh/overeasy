@@ -1,5 +1,5 @@
 from PIL import Image
-from overeasy.types import MultimodalLLM, OCRModel
+from overeasy.types import MultimodalLLM, OCRModel, Model
 from typing import Optional
 import anthropic
 import base64
@@ -8,6 +8,7 @@ import os
 
 #TODO: Add support for prompting with multiple images
 class Claude(MultimodalLLM, OCRModel):
+    
     def __init__(self, model: str = 'claude-3-opus-20240229', api_key: Optional[str] = None):
         self.api_key = api_key if api_key is not None else os.getenv("ANTHROPIC_API_KEY")
         if self.api_key is None:
@@ -52,7 +53,7 @@ class Claude(MultimodalLLM, OCRModel):
                 }
             ],
         )
-        return message.content[0].text
+        return message.content[0].text  # type: ignore
 
     def prompt(self, query: str) -> str:
         message = self.client.messages.create(
@@ -62,7 +63,13 @@ class Claude(MultimodalLLM, OCRModel):
                 {"role": "user", "content": query}
             ]
         )
-        return message.content[0].text
+        return message.content[0].text  # type: ignore
 
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image.")
+    
+    def load_resources(self):
+        super().load_resources()
+    
+    def release_resources(self):
+        super().release_resources()

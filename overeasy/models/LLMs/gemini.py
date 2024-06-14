@@ -1,11 +1,11 @@
 import os
 from PIL import Image
-from overeasy.types import MultimodalLLM, OCRModel
+from overeasy.types import MultimodalLLM, OCRModel, Model
 from typing import Optional
 import google.generativeai as genai
 
 
-class Gemini(MultimodalLLM, OCRModel):
+class Gemini(MultimodalLLM, OCRModel, Model):
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key if api_key is not None else os.getenv("GOOGLE_API_KEY")
         if self.api_key is None:
@@ -28,3 +28,9 @@ class Gemini(MultimodalLLM, OCRModel):
     
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image.")
+    
+    def load_resources(self):
+        super().load_resources()
+    
+    def release_resources(self):
+        super().release_resources()

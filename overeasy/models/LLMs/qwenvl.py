@@ -6,6 +6,7 @@ from overeasy.logging import log_time
 from overeasy.types import MultimodalLLM
 from typing import Literal
 import importlib
+import torch
 
 # use bf16
 # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, bf16=True).eval()
@@ -44,12 +45,14 @@ def setup_autogptq():
         print("CUDA version could not be determined.")
         
 
-model_type = Literal["base", "int4", "fp16"]
-def load_model(model_type: model_type):
+model_TYPE = Literal["base", "int4", "fp16", "bf16"]
+def load_model(model_type: model_TYPE):
     if model_type == "base":
-        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True).eval()
+        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="cuda", trust_remote_code=True).eval()
     elif model_type == "fp16":
-        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, fp16=True).eval()
+        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="cuda", trust_remote_code=True, fp16=True).eval()
+    elif model_type == "bf16":
+        model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="cuda", trust_remote_code=True, bf16=True).eval()
     elif model_type == "int4":
         def is_autogptq_installed():
             package_name = 'auto_gptq'
@@ -64,21 +67,36 @@ def load_model(model_type: model_type):
         
         model = AutoModelForCausalLM.from_pretrained(
             "Qwen/Qwen-VL-Chat-Int4",
-            device_map="auto",
+            device_map="cuda",
             trust_remote_code=True
         ).eval()
+    else:
+        raise Exception("Model type not supported")
         
     # model.generation_config = GenerationConfig.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
     
     return model
 
 class QwenVL(MultimodalLLM):
-    def __init__(self, model: model_type = "int4"):
-        self.model = load_model(model)
-        if model == "int4":
+    
+    def __init__(self, model_type: model_TYPE = "bf16"):
+        if not torch.cuda.is_available():
+            raise Exception("CUDA not available. Can't use QwenVL")
+        self.model_type = model_type
+ 
+    def load_resources(self):
+        self.model = load_model(self.model_type)
+
+        if self.model_type == "int4":
             self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat-Int4", trust_remote_code=True)
         else:
             self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
+       
+    def release_resources(self):
+        del self.model
+        del self.tokenizer
+        torch.cuda.empty_cache()
+
         
     @log_time
     def prompt_with_image(self, image : Image.Image, query: str) -> str:

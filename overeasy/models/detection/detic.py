@@ -12,6 +12,7 @@ from PIL import Image
 import cv2
 from overeasy.types import BoundingBoxModel
 import subprocess
+import urllib.request
 
 VOCAB = "custom"
 CONFIDENCE_THRESHOLD = 0.3
@@ -87,8 +88,10 @@ def check_dependencies():
     try:
         import detectron2
     except:
+        print("INSTALLING detectron2")
         subprocess.run(
-            ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
+            [sys.executable, "-m", "pip", "install", "torch git+https://github.com/facebookresearch/detectron2.git"],
+            check=True
         )
             
     try:
@@ -111,17 +114,15 @@ def check_dependencies():
 
             os.chdir(detic_path)
 
-            subprocess.run(["pip", "install", "-r", "requirements.txt"])
+            subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
 
 
             os.makedirs(models_dir, exist_ok=True)
 
             model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
             
-            subprocess.run(["wget", model_url, "-O", model_path])
+            urllib.request.urlretrieve(model_url, model_path)
             
-        config_dir = os.path.join(detic_path, "configs", "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml")
-        return model_path, config_dir
     finally:
         os.chdir(original_dir)
 
@@ -130,21 +131,19 @@ def check_dependencies():
 
 class DETIC(BoundingBoxModel):
     def __init__(self):
-        self.weights_dir, self.config_dir = check_dependencies()
-        
+        check_dependencies()
         self.classes = None
+        
+    def load_resources(self):
+        pass 
+        
+    def release_resources(self):
+        del self.detic_model
+        torch.cuda.empty_cache()
         
     def set_classes(self, classes: List[str]):
         self.classes = classes
-        try:
-            import detectron2
-        except:
-            subprocess.run(
-            ["pip", "install", "git+https://github.com/facebookresearch/detectron2.git"]
-        )
         self.detic_model = load_detic_model(classes)
-        
-
         
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
         if self.classes is None:

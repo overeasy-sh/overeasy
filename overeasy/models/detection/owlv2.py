@@ -5,13 +5,19 @@ import numpy as np
 from PIL import Image
 from overeasy.types import BoundingBoxModel, Detections, DetectionType
 from transformers import pipeline
+import torch
 
 class OwlV2(BoundingBoxModel):
-    
     def __init__(self):
-        checkpoint = "google/owlv2-base-patch16-ensemble"
-        self.detector = pipeline(model=checkpoint, task="zero-shot-object-detection")
-        
+        self.checkpoint = "google/owlv2-base-patch16-ensemble"
+    
+    def load_resources(self):
+        self.detector = pipeline(model=self.checkpoint, task="zero-shot-object-detection")
+    
+    def release_resources(self):
+        del self.detector
+        torch.cuda.empty_cache()
+    
     def detect(self, image: Image.Image, classes: List[str]) -> Detections:
         predictions = self.detector(image, candidate_labels=classes)
         num_preds = len(predictions)
