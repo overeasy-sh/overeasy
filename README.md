@@ -1,92 +1,90 @@
-# 🎉 Announcing Overeasy v0
+<h1 align="center"> 🥚 Overeasy
+<br/>
+<span align="center">
+   <a href="https://github.com/overeasy-sh/overeasy/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/overeasy-sh/overeasy" alt="Github Stars"></a>
+   <a href="https://pypi.org/project/overeasy/" target="_blank"><img src="https://img.shields.io/pypi/v/overeasy.svg?style=flat-square&label=PyPI+Overeasy" alt="Issues"></a>
+   <a href="https://github.com/overeasy-sh/overeasy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
+    <a href="https://docs.overeasy.sh"><img src="https://img.shields.io/badge/Docs-informational" alt="Docs"></a>
+    <a href="https://colab.research.google.com/drive/1Mkx9S6IG5130wiP9WmwgINiyw0hPsh3c?usp=sharing#scrollTo=L0_U27WJaTNO""><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab Demo"></a>
+</span>
+ </h1>
 
-This repository contains code for **Overeasy**, a framework designed for constructing multi-step visual workflows. This library is engineered to simplify complex computer vision tasks by breaking them down into manageable, sequential operations. This methodology enhances the performance of models while boosting their interpretability.
 
-Overeasy v0 focuses on `object detection` and `classification`.
 
-# Key Components
 
-## 🧩 Workflows
+> **Overeasy is a framework for creating powerful computer vision models with no data**. 
 
-A `Workflow` defines a sequence of Agents that are executed in order, processing an image from input to final output upon execution. The output of each Agent is passed as an input to the next Agent in the Workflow. Workflows allow for the dynamic integration of various `Agents` based on the task requirement.
+By leveraging and chaining zero-shot models, Overeasy enables you to create custom end-to-end pipelines for tasks like:
 
-Overeasy currently supports these models for use in **Classification, Detection, LLMs, and Recognition** tasks:
+- 📦 Bounding Box Detection
+- 🏷️ Classification
+- 🖌️ Segmentation (Coming Soon!)
 
-- `Classification`: CLIP, OpenCLIPBase, LaionCLIP, BiomedCLIP
-- `Detection`: YOLOworld, DETIC, GroundingDINO
-- `LLMs`: QwenVL, GPT, GPT4Vision
-- `Recognition`: TextractModel, RekognitionModel
+All of this can be achieved without needing to collect and annotate large training datasets. 
 
-## 🤖 Agents
+Overeasy makes it simple to combine pre-trained zero-shot models to build powerful custom computer vision solutions.
 
-Each `Agent` encapsulates a specific task related to processing an input image. This modular approach enables the construction of complex Workflows, where each Agent contributes its specialized expertise at a specific stage of the visual processing pipeline. 
 
-Below is an overview of the Agents currently supported in our framework:
-
-- `BoundingBoxSelectAgent`: This Agent is used to detect an object and select its bounding box from an image, as well as to crop the image to the detected box. It can also handle split detections, where multiple bounding boxes are found.
-- `VisionPromptAgent`: This Agent is used to generate a response to a given query based on the content of an image. It uses a model to process the image and the query.
-- `DenseCaptioningAgent`: This Agent is used to generate a detailed description of an image. It uses a model to process the image and generate the description.
-- `BinaryChoiceAgent`: This Agent is used to make a binary choice (yes or no) based on the content of an image. It uses a model to process the image and generate the response.
-- `ClassificationAgent`: This Agent is used to classify the content of an image into one of the specified classes. It uses a model to process the image and perform the classification.
-- `OCRAgent`: This Agent is used to extract text from an image. It uses a model to process the image and perform the OCR.
-- `FacialRecognitionAgent`: This Agent is used to recognize a face in an image. It uses a model to process the image and perform facial recognition.
-- `JSONAgent`: This Agent is used to generate a JSON response based on the content of an image. It uses a model to process the image and generate the response.
-- `JoinAgent`: This Agent is used to combine the results of multiple agents.
-
-# Example Output
-
-Let’s walk through an example using Overeasy. 
-
-Say we’re interested in identifying the workers wearing hardhats in an input image.
-
-## Code
-
-```python
-from overeasy import Workflow, BoundingBoxSelectAgent, BinaryChoiceAgent, JoinAgent, visualize_graph   
-from PIL import Image
-import overeasy as ov
-
-# Load input image
-image_path = "./construction.jpg"
-image = Image.open(image_path)
-
-# Create a new Workflow
-workflow = Workflow()
-
-workflow.add_step(BoundingBoxSelectAgent(classes=["person"], split=True))
-workflow.add_step(BinaryChoiceAgent("Is this person wearing a hardhat?"))
-workflow.add_step(JoinAgent())
-result, graph = workflow.execute(image)
-
-ov.logging.print_summary()
-
-fig = visualize_graph(graph)
-fig.savefig("workflow_result.png")
+## Installation
+It's as easy as
+```bash
+conda create -n overeasy python=3.10
+conda activate overeasy
+pip install overeasy
 ```
 
-## Output
+For installing extras refer to our [Docs](https://docs.overeasy.sh/installation/installing-extras).
 
-<img src="example.png" alt="Input Image" width="500"/>
+## Key Features
+- `🤖 Agents`: Specialized tools that perform specific image processing tasks.
+- `🧩 Workflows`: Define a sequence of Agents to process images in a structured manner.
+- `🔗 Execution Graphs`: Manage and visualize the image processing pipeline.
+- `🔎 Detections`: Represent bounding boxes, segmentation, and classifications.
 
-## Analysis
+## Documentation 
+For more details on types, library structure, and available models please refer to our [Docs](https://docs.overeasy.sh).
 
-### Layer 0: Original Image
+## Example Usage 
 
-This is the original input image for our Workflow.
+Here is some example Overeasy code:
 
-### Layer 1: Person Detection
+Download example image
+```bash
+!wget https://github.com/overeasy-sh/overeasy/blob/73adbaeba51f532a7023243266da826ed1ced6ec/examples/construction.jpg?raw=true -O construction.jpg
+```
 
-Layer 1 uses a `BoundingBoxSelectAgent` to detect people in the original image, cropping out images of detected individuals. Associated with each image is a confidence score (between 0 to 1), which indicates how certain a model is that the cropped image contains a person. Here, a score of 0.48 indicates that the model is 48% certain the cropped image is a person. 
+```python
+from overeasy import *
+from overeasy.models import OwlV2
+from PIL import Image
 
-### Layer 2: Hardhat Detection
+workflow = Workflow([
+    # Detect each head in the input image
+    BoundingBoxSelectAgent(classes=["person's head"], model=OwlV2()),
+    # Applies Non-Maximum Suppression to remove overlapping bounding boxes
+    NMSAgent(iou_threshold=0.5, score_threshold=0),
+    # Splits the input image into images of each detected head
+    SplitAgent(),
+    # Classifies the split images using CLIP
+    ClassificationAgent(classes=["hard hat", "no hard hat"]),
+    # Maps the returned class names
+    ClassMapAgent({"hard hat": "has ppe", "no hard hat": "no ppe"}),
+    # Combines results back into a BoundingBox Detection
+    JoinAgent()
+])
 
-Layer 2 takes the output from Layer 1 and uses a `BinaryChoiceAgent` to determine whether the detected individual is wearing a hardhat. Each cropped image now has a label of "yes" or "no" with associated confidence scores. In this case, the confidence scores are all 1.00, which indicates that the model is 100% certain of its decision on whether the person is wearing a hardhat. 
+image = Image.open("./construction.jpg")
+result, graph = workflow.execute(image)
+workflow.visualize(graph)
+```
+And you should see an output like [this](https://htmlpreview.github.io/?https://github.com/overeasy-sh/overeasy/blob/main/gradio_example.html)
 
-### Layer 3: Final Output
 
-The Workflow uses a `JoinAgent` to combine the results of the BoundingBoxSelectAgent and the BinaryChoiceAgent. The JoinAgent joins the predictions from the cropped images back into the original image.
 
-# License
+If you don't have a local GPU, you can run our examples by making a copy of this [Colab notebook](https://colab.research.google.com/drive/1Mkx9S6IG5130wiP9WmwgINiyw0hPsh3c?usp=sharing#scrollTo=L0_U27WJaTNO).
 
-MIT License
+## Support
+If you have any questions or need assistance, please open an issue or reach out to us at help@overeasy.sh.
 
+
+Let's build amazing vision models together 🍳!
