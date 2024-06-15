@@ -46,13 +46,13 @@ For more details on types, library structure, and available models please refer 
 
 ## Example Usage 
 
-Here is some example Overeasy code:
 
 Download example image
 ```bash
 !wget https://github.com/overeasy-sh/overeasy/blob/73adbaeba51f532a7023243266da826ed1ced6ec/examples/construction.jpg?raw=true -O construction.jpg
 ```
 
+Example workflow to identify if a person is wearing a PPE on a work site:
 ```python
 from overeasy import *
 from overeasy.models import OwlV2
