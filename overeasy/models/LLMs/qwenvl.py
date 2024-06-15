@@ -82,6 +82,8 @@ class QwenVL(MultimodalLLM):
     def __init__(self, model_type: model_TYPE = "bf16"):
         if not torch.cuda.is_available():
             raise Exception("CUDA not available. Can't use QwenVL")
+        if model_type not in ["base", "int4", "fp16", "bf16"]:
+            raise Exception("Model type not supported")
         self.model_type = model_type
  
     def load_resources(self):
