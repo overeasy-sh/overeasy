@@ -77,7 +77,7 @@ image = Image.open("./construction.jpg")
 result, graph = workflow.execute(image)
 workflow.visualize(graph)
 ```
-And you should see an output like [this](https://htmlpreview.github.io/?https://github.com/overeasy-sh/overeasy/blob/main/gradio_example.html)
+And you should see an output like [this](https://overeasy-sh.github.io/gradio-example/Gradio.html)
 
 
 
