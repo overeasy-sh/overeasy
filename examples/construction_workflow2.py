@@ -1,3 +1,4 @@
+import os
 from overeasy import Workflow, BoundingBoxSelectAgent, NMSAgent, JoinAgent, SplitAgent, OwlV2, ClassificationAgent, ClassMapAgent
 from PIL import Image
 

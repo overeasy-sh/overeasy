@@ -1,7 +1,7 @@
+import os
 from overeasy import Workflow, BoundingBoxSelectAgent, ToClassificationAgent, JoinAgent, SplitAgent, InstructorImageAgent, ClassMapAgent
 from pydantic import BaseModel
 from PIL import Image
-import os
 
 class PPE(BaseModel):
     hardhat: bool

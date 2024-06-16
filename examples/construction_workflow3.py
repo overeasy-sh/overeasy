@@ -1,6 +1,6 @@
+import os
 from overeasy import *
 from PIL import Image
-import os
 
 workflow = Workflow([
     # Detect each head in the input image
