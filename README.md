@@ -41,10 +41,13 @@ For installing extras refer to our [Docs](https://docs.overeasy.sh/installation/
 - `🔗 Execution Graphs`: Manage and visualize the image processing pipeline.
 - `🔎 Detections`: Represent bounding boxes, segmentation, and classifications.
 
+
 ## Documentation 
 For more details on types, library structure, and available models please refer to our [Docs](https://docs.overeasy.sh).
 
 ## Example Usage 
+
+> Note: If you don't have a local GPU, you can run our examples by making a copy of this [Colab notebook](https://colab.research.google.com/drive/1Mkx9S6IG5130wiP9WmwgINiyw0hPsh3c?usp=sharing#scrollTo=L0_U27WJaTNO).
 
 
 Download example image
@@ -77,11 +80,20 @@ image = Image.open("./construction.jpg")
 result, graph = workflow.execute(image)
 workflow.visualize(graph)
 ```
-And you should see an output like [this](https://overeasy-sh.github.io/gradio-example/Gradio.html)
 
+### Diagram
 
+Here's a diagram of this workflow. Each layer in the graph represents a step in the workflow:
+<!-- 
+<img src="./assets/graph-diagram.png" alt="ExecutionGraph"/> -->
 
-If you don't have a local GPU, you can run our examples by making a copy of this [Colab notebook](https://colab.research.google.com/drive/1Mkx9S6IG5130wiP9WmwgINiyw0hPsh3c?usp=sharing#scrollTo=L0_U27WJaTNO).
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/graph-diagram-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/graph-diagram.png">
+  <img alt="Diagram" src="./assets/graph-diagram.png">
+</picture>
+
+The image and data attributes in each node are used together to visualize the current state of the workflow. Calling the  `visualize` function on the workflow will spawn a Gradio instance that looks like [this](https://overeasy-sh.github.io/gradio-example/Gradio.html). 
 
 ## Support
 If you have any questions or need assistance, please open an issue or reach out to us at help@overeasy.sh.
