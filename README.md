@@ -11,7 +11,8 @@
 
 
 
-> **Overeasy is a framework for creating powerful computer vision models with no data**. 
+<p > <h3 align="center">Create powerful zero-shot vision models! </h3> </p>
+
 
 Overeasy allows you to chain zero-shot vision models to create custom end-to-end pipelines for tasks like:
 
