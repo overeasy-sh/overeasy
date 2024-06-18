@@ -1,7 +1,6 @@
 <h1 align="center"> 🥚 Overeasy
 <br/>
 <span align="center">
-   <a href="https://github.com/overeasy-sh/overeasy/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/overeasy-sh/overeasy" alt="Github Stars"></a>
    <a href="https://pypi.org/project/overeasy/" target="_blank"><img src="https://img.shields.io/pypi/v/overeasy.svg?style=flat-square&label=PyPI+Overeasy" alt="Issues"></a>
    <a href="https://github.com/overeasy-sh/overeasy/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
     <a href="https://docs.overeasy.sh"><img src="https://img.shields.io/badge/Docs-informational" alt="Docs"></a>
