@@ -28,8 +28,6 @@ Overeasy makes it simple to combine pre-trained zero-shot models to build powerf
 ## Installation
 It's as easy as
 ```bash
-conda create -n overeasy python=3.10
-conda activate overeasy
 pip install overeasy
 ```
 
