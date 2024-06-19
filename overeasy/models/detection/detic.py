@@ -114,8 +114,18 @@ def check_dependencies():
 
             os.chdir(detic_path)
 
-            subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
-
+            import platform
+            install_cmds = [sys.executable, "-m", "pip", "install", "git+https://github.com/facebookresearch/detectron2.git", "--no-build-isolation"]
+            if platform.system() == "Darwin":
+                subprocess.run(
+                    ["export", "MACOSX_DEPLOYMENT_TARGET=10.13", "&&", *install_cmds],
+                    check=True
+                )
+            else:
+                subprocess.run(
+                    install_cmds,
+                    check=True
+                )
 
             os.makedirs(models_dir, exist_ok=True)
 
