@@ -36,10 +36,9 @@ class ExecutionNode:
     def data_is_detections(self) -> bool:
         return isinstance(self.data, Detections)
     
-    
-    def visualize(self) -> Image.Image:
+    def visualize(self, seed: Optional[int] = None) -> Image.Image:
         if self.data_is_detections():
-            return annotate(self.image, self.data)
+            return annotate(self.image, self.data, seed)
         else:
             fig, ax = plt.subplots()
             ax.imshow(np.array(self.image))
@@ -49,7 +48,7 @@ class ExecutionNode:
             fig.canvas.draw()  
             data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8) # type: ignore
             data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            plt.close(fig)  
+            plt.close(fig)
             image = Image.fromarray(data)
             return image.convert('RGB')
     
@@ -166,6 +165,10 @@ class Model(ABC):
     def release_resources(self):
         pass
     
+    def __del__(self):
+        self.release_resources()
+
+    
 # OCRModel reads text from an image
 class OCRModel(Model):
     @abstractmethod
@@ -177,6 +180,7 @@ class LLM(Model):
     def prompt(self, query: str) -> str:
         pass
     
+#TODO: Add support for prompting with multiple images
 class MultimodalLLM(LLM):
     @abstractmethod
     def prompt_with_image(self, image: Image.Image, query: str) -> str:

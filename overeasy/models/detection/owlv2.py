@@ -15,11 +15,11 @@ class OwlV2(BoundingBoxModel):
         self.detector = pipeline(model=self.checkpoint, task="zero-shot-object-detection")
     
     def release_resources(self):
-        del self.detector
+        self.detector = None
         torch.cuda.empty_cache()
     
-    def detect(self, image: Image.Image, classes: List[str]) -> Detections:
-        predictions = self.detector(image, candidate_labels=classes)
+    def detect(self, image: Image.Image, classes: List[str], threshold: float = 0) -> Detections:
+        predictions = self.detector(image, candidate_labels=classes,)
         num_preds = len(predictions)
         xyxy = np.zeros((num_preds, 4), dtype=np.int32)
         confidence = np.zeros(num_preds, dtype=np.float32)
@@ -31,6 +31,11 @@ class OwlV2(BoundingBoxModel):
             xyxy[i] = [x1, y1, x2, y2]
             confidence[i] = pred['score']
             class_ids[i] = classes.index(pred['label'])
+        
+        slice = confidence > threshold
+        xyxy = xyxy[slice, :]
+        confidence = confidence[slice]
+        class_ids = class_ids[slice]
 
         return Detections(
             xyxy=xyxy,

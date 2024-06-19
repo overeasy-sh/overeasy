@@ -1,4 +1,3 @@
-import openai
 import os
 from PIL import Image
 from overeasy.types import MultimodalLLM, LLM, OCRModel, Model
@@ -7,6 +6,7 @@ import io
 import base64
 import requests
 import warnings
+import backoff
 
 def encode_image_to_base64(image: Image.Image) -> str:
     buffered = io.BytesIO()
@@ -36,6 +36,19 @@ current_models = [
     "gpt-3.5-turbo-16k-0613"
 ]
 
+class RateLimitError(Exception):
+    pass
+
+@backoff.on_exception(backoff.expo, RateLimitError, max_tries=7)
+def _post(self, url, headers, json):
+    response = requests.post(url, headers=headers, json=json)
+    response.raise_for_status()
+    if response.status_code == 429:
+        raise RateLimitError("Rate limit exceeded, retrying...")
+
+    return response.json()
+
+
 def _prompt(self, query: str, model: str) -> str:
     headers = {
         "Content-Type": "application/json",
@@ -47,8 +60,7 @@ def _prompt(self, query: str, model: str) -> str:
         "max_tokens": 500
     }
 
-    response = requests.post("https://api.openai.com/v1/completions", headers=headers, json=payload)
-    response_json = response.json()
+    response_json = _post("https://api.openai.com/v1/completions", headers=headers, json=payload)
 
     return response_json['choices'][0]['message']['content'].strip()
 
@@ -69,7 +81,7 @@ class GPT(LLM):
     
     def release_resources(self):
         super().release_resources()
-    
+
 class GPTVision(MultimodalLLM, OCRModel):
     def __init__(self, api_key: Optional[str] = None,
                  model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
@@ -107,7 +119,7 @@ class GPTVision(MultimodalLLM, OCRModel):
             "max_tokens": 500
         }
         
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        response = _post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
         response_json = response.json()
         
         return response_json['choices'][0]['message']['content'].strip()

@@ -1,8 +1,7 @@
 from typing import List, Tuple, Optional, Callable, Any
 from PIL import Image
-from overeasy.models import GPT, QwenVL, GPTVision, CLIP
+from overeasy.models import *
 from dataclasses import dataclass
-from overeasy.models import OwlV2, GroundingDINO
 from overeasy.types import *
 import numpy as np
 from pydantic import BaseModel
@@ -13,11 +12,12 @@ from math import sqrt
 from .visualize_utils import annotate
 import base64, io, os
 from typing import Union, Dict
+from tqdm import tqdm
 
 class BoundingBoxSelectAgent(ImageAgent):
-    def __init__(self, classes: List[str], model: Optional[BoundingBoxModel] = None):
+    def __init__(self, classes: List[str], model: BoundingBoxModel = GroundingDINO()):
         self.classes = classes
-        self.model = model if model is not None else GroundingDINO()
+        self.model = model
     
     def execute(self, image: Image.Image) -> ExecutionNode:
         return ExecutionNode(image, self.model.detect(image, self.classes))
@@ -27,9 +27,9 @@ class BoundingBoxSelectAgent(ImageAgent):
         return f"{self.__class__.__name__}(classes={self.classes}, model={model_name})" 
 
 class VisionPromptAgent(ImageAgent):
-    def __init__(self, query: str, model: Optional[MultimodalLLM] = None):
+    def __init__(self, query: str, model: MultimodalLLM = GPTVision()):
         self.query = query
-        self.model = model if model is not None else GPTVision()
+        self.model = model
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""{self.query}"""
@@ -41,8 +41,8 @@ class VisionPromptAgent(ImageAgent):
         return f"{self.__class__.__name__}(query={self.query}, model={model_name})"
     
 class DenseCaptioningAgent(ImageAgent):
-    def __init__(self, model: Optional[Union[MultimodalLLM, CaptioningModel]] = None):
-        self.model = model if model is not None else GPTVision()
+    def __init__(self, model: Union[MultimodalLLM, CaptioningModel] = GPTVision()):
+        self.model = model
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""Describe the following image in detail"""
@@ -58,9 +58,9 @@ class DenseCaptioningAgent(ImageAgent):
         return f"{self.__class__.__name__}(model={model_name})"
 
 class TextPromptAgent(TextAgent):
-    def __init__(self, query: str, model: Optional[LLM] = None):
+    def __init__(self, query: str, model: LLM = GPT()):
         self.query = query
-        self.model = model if model is not None else GPT()
+        self.model = model
 
     def execute(self, text: str)-> str:
         prompt = f"""{text}\n{self.query}"""
@@ -73,9 +73,9 @@ class TextPromptAgent(TextAgent):
 
 # Convert binary_choice into an agent class
 class BinaryChoiceAgent(ImageAgent):
-    def __init__(self, query: str, model:Optional[MultimodalLLM] = None):
+    def __init__(self, query: str, model: MultimodalLLM = GPTVision()):
         self.query = query
-        self.model = model if model is not None else GPTVision()
+        self.model = model 
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         prompt = f"""{self.query}"""
@@ -93,9 +93,9 @@ class BinaryChoiceAgent(ImageAgent):
         return f"{self.__class__.__name__}(query={self.query}, model={model_name})"
 
 class ClassificationAgent(ImageAgent):
-    def __init__(self, classes, model: Optional[ClassificationModel] = None):
+    def __init__(self, classes, model: ClassificationModel = LaionCLIP()):
         self.classes = classes
-        self.model = model if model is not None else CLIP()
+        self.model = model 
 
     def execute(self, image: Image.Image)-> ExecutionNode:
         selected_class = self.model.classify(image, self.classes)
@@ -110,11 +110,10 @@ class ClassMapAgent(DetectionAgent):
         self.name_map = name_map
     
     def execute(self, dets: Detections) -> Detections:
-        class_names = []
-        for x in dets.class_names:
-            if x not in self.name_map:
-                raise ValueError(f"Class name '{x}' not mapped")
-            class_names.append(self.name_map[x])
+        unmapped_classes = set(dets.class_names) - set(self.name_map.keys())
+        if unmapped_classes:
+            raise ValueError(f"Class names {unmapped_classes} not mapped")
+        class_names = [self.name_map[x] for x in dets.class_names]
             
         new_dets = Detections(
             xyxy=dets.xyxy,
@@ -406,9 +405,9 @@ class Workflow:
         if input_image is None:
             raise ValueError("Input image is None")
         elif isinstance(input_image, np.ndarray):
-            input_image = Image.fromarray(input_image)
+            raise ValueError("Input image is a numpy array, please convert it to a PIL.Image first using Image.fromarray(), make sure to convert your color channels to RGB!")            
         elif not isinstance(input_image, Image.Image):
-            raise ValueError("Input image is not a valid image format")
+            raise ValueError("Input image is not a valid image format, must be a PIL.Image")
         
         root = ExecutionNode(input_image, None)
         graph = ExecutionGraph(root)
@@ -468,6 +467,60 @@ class Workflow:
         return intermediate_results, graph
     
 
+    def execute_multiple(self, input_images: List[Image.Image]) -> Tuple[List[List[ExecutionNode]], List[ExecutionGraph]]:
+        if not all(isinstance(img, Image.Image) for img in input_images):
+            raise ValueError("All input images must be of type PIL.Image")
+
+        graphs = [ExecutionGraph(ExecutionNode(img, None)) for img in input_images]
+        intermediate_results = [[graph.root] for graph in graphs]
+
+        for ind, agent in enumerate(self.steps):
+            if hasattr(agent, 'model') and isinstance(agent.model, Model):
+                agent.model.load_resources()
+
+            try:
+                if isinstance(agent, JoinAgent) or isinstance(agent, SplitAgent):
+                    for i, graph in enumerate(tqdm(graphs)):
+                        if isinstance(agent, JoinAgent):
+                            intermediate_results[i] = agent.join(intermediate_results[i], graph)
+                        elif isinstance(agent, SplitAgent):
+                            res = []
+                            for node in intermediate_results[i]:
+                                children = agent.execute(node)
+                                res.extend(children)
+                                for child in children:
+                                    graph.add_child(node, child)
+                            intermediate_results[i] = res
+                else:
+                    new_intermediate_results: List[List[ExecutionNode]] = [[] for _ in graphs]
+                    for i, graph in enumerate(tqdm(graphs)):
+                        for node in intermediate_results[i]:
+                            if isinstance(agent, ImageAgent):
+                                child = agent.execute(node.image)
+                                graph.add_child(node, child)
+                                new_intermediate_results[i].append(child)
+                            elif isinstance(agent, TextAgent):
+                                if isinstance(node.data, Detections):
+                                    raise ValueError("TextAgent cannot be used with must have stringable input")
+                                response = agent.execute(str(node.data))
+                                child = ExecutionNode(node.image, response)
+                                graph.add_child(node, child)
+                                new_intermediate_results[i].append(child)
+                            elif isinstance(agent, DetectionAgent):
+                                output_detection = agent.execute(node.data)
+                                child = ExecutionNode(node.image, output_detection)
+                                graph.add_child(node, child)
+                                new_intermediate_results[i].append(child)
+                            elif isinstance(agent, DataAgent):
+                                child = agent.execute(node)
+                                graph.add_child(node, child)
+                                new_intermediate_results[i].append(child)
+                    intermediate_results = new_intermediate_results
+            finally:
+                if hasattr(agent, 'model') and isinstance(agent.model, Model):
+                    agent.model.release_resources()
+
+        return intermediate_results, graphs
     
     def to_steps(self, graph: ExecutionGraph) -> List[Tuple[str, List[Tuple[Image.Image, str]], str]]:
         workflow_steps_names = ["Input Image"]

@@ -3,18 +3,22 @@ from PIL import Image
 import random
 import cv2
 from overeasy.types.detections import Detections, DetectionType
+from typing import Optional
+
 random.seed(42)
 
 def generate_random_color():
     return (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
 
-def annotate(scene: Image.Image, detection: Detections) -> Image.Image:
+def annotate(scene: Image.Image, detection: Detections, seed: Optional[int] = None) -> Image.Image:
+    if seed is not None:
+        random.seed(seed)
 
     def draw_bounding_boxes(image: Image.Image, boxes, class_ids, class_names):
         cv2_image = np.array(image)
         image_height, image_width = cv2_image.shape[:2]
         scale = np.sqrt(image_height * image_width) / 200
-        
+
         for box, class_id in zip(boxes, class_ids):
             x1, y1, x2, y2 = map(int, box)
             color = generate_random_color()

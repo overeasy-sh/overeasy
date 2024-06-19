@@ -45,14 +45,14 @@ def load_grounding_dino(model: GroundingDINOModel):
     checkpoint_path = os.path.join(
         GROUNDING_DINO_CACHE_DIR, checkpoint_file
     )
-
-
-    try:
-        grounding_dino_model = Model(
+    instantiate = lambda: Model(
             model_config_path=config_path,
             model_checkpoint_path=checkpoint_path,
             device=DEVICE,
         )
+
+    try:
+        grounding_dino_model = instantiate()
         return grounding_dino_model
     except Exception:
         if not os.path.exists(GROUNDING_DINO_CACHE_DIR):
@@ -75,11 +75,7 @@ def load_grounding_dino(model: GroundingDINOModel):
                 url = f"https://raw.githubusercontent.com/roboflow/GroundingDINO/main/groundingdino/config/{config_file}"
             urllib.request.urlretrieve(url, config_path)
 
-        grounding_dino_model = Model(
-            model_config_path=config_path,
-            model_checkpoint_path=checkpoint_path,
-            device=DEVICE,
-        )
+        grounding_dino_model = instantiate()
 
         return grounding_dino_model
     
@@ -161,7 +157,7 @@ class GroundingDINO(BoundingBoxModel):
             sys.stdout = original_stdout
             
     def release_resources(self):
-        del self.grounding_dino_model
+        self.grounding_dino_model = None
         torch.cuda.empty_cache()
     
     @log_time

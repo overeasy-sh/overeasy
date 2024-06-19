@@ -6,7 +6,6 @@ import base64
 import io
 import os
 
-#TODO: Add support for prompting with multiple images
 class Claude(MultimodalLLM, OCRModel):
     
     def __init__(self, model: str = 'claude-3-opus-20240229', api_key: Optional[str] = None):
