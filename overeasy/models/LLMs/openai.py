@@ -68,8 +68,6 @@ class GPT(LLM):
     def __init__(self, api_key: Optional[str] = None, model:str = "gpt-3.5-turbo"):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.model = model
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
         if self.model not in current_models:
             warnings.warn(f"Model {model} may not be supported. Please provide a valid model.")
 
@@ -77,7 +75,8 @@ class GPT(LLM):
         return _prompt(self, query, self.model)
     
     def load_resources(self):
-        super().load_resources()
+        if self.api_key is None:
+            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
     
     def release_resources(self):
         super().release_resources()
@@ -87,8 +86,6 @@ class GPTVision(MultimodalLLM, OCRModel):
                  model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
                  ):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
         self.model = "gpt-4-turbo" 
         
     def prompt_with_image(self, image: Image.Image, query: str) -> str:
@@ -131,6 +128,8 @@ class GPTVision(MultimodalLLM, OCRModel):
         return self.prompt_with_image(image, "Read the text from the image.")
     
     def load_resources(self):
+        if self.api_key is None:
+            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
         super().load_resources()
     
     def release_resources(self):
