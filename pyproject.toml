@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "overeasy"
-version = "0.1.2"
+version = "0.1.3"
 description = ""
 authors = ["Ani Rahul <anirahul@redshiftai.app>"]
 license = "MIT"
