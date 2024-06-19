@@ -16,7 +16,6 @@ class OwlV2(BoundingBoxModel):
     
     def release_resources(self):
         self.detector = None
-        torch.cuda.empty_cache()
     
     def detect(self, image: Image.Image, classes: List[str], threshold: float = 0) -> Detections:
         predictions = self.detector(image, candidate_labels=classes,)

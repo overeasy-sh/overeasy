@@ -15,7 +15,6 @@ class SigLIP(ClassificationModel):
     def release_resources(self):
         self.processor = None
         self.model = None
-        torch.cuda.empty_cache()
 
     def classify(self, image: Image.Image, classes: List[str]) -> Detections:
         return self.model(image)

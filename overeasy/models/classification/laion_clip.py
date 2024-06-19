@@ -18,7 +18,6 @@ class OpenCLIPBase(ClassificationModel):
         self.model = None
         self.tokenizer = None
         self.preprocess = None
-        torch.cuda.empty_cache()
 
     def classify(self, image: Image.Image, classes: list) -> Detections:
         image = self.preprocess(image).unsqueeze(0)

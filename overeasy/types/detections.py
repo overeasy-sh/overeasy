@@ -237,6 +237,8 @@ class Detections:
                 },
                 detection_type=DetectionType.BOUNDING_BOX
             )
+            
+
         masks = extract_ultralytics_masks(ultralytics_results)
         class_id = ultralytics_results.boxes.cls.cpu().numpy().astype(int)
         
@@ -244,8 +246,7 @@ class Detections:
             class_names = np.array(list(ultralytics_results.names.values()))
         else:
             class_names = np.array(ultralytics_results.names)
-                    
-        print("CLASS NAMES", class_names)
+        
         return cls(
             xyxy=ultralytics_results.boxes.xyxy.cpu().numpy(),
             confidence=ultralytics_results.boxes.conf.cpu().numpy(),

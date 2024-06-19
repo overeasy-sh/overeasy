@@ -39,12 +39,11 @@ class YOLOWorld(BoundingBoxModel):
 
     def release_resources(self):
         self.model = None
-        torch.cuda.empty_cache()
 
     def detect(self, image: Image.Image, classes: List[str], box_threshold=0, text_threshold=0) -> Detections:
         self.model.set_classes(classes)
         results = self.model.predict(image, verbose=False)
         detections = Detections.from_ultralytics(results[0])
-        detections = detections[detections.confidence > box_threshold]
+        # detections = detections[detections.confidence > box_threshold]
         return detections
     

@@ -18,7 +18,6 @@ class CLIP(ClassificationModel):
     def release_resources(self):
         self.model = None
         self.processor = None
-        torch.cuda.empty_cache()
         
     def classify(self, image: Image.Image, classes: list) -> Detections:
         inputs = self.processor(text=classes, images=image, return_tensors="pt", padding=True)

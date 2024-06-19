@@ -149,7 +149,6 @@ class DETIC(BoundingBoxModel):
         
     def release_resources(self):
         self.detic_model = None
-        torch.cuda.empty_cache()
         
     def set_classes(self, classes: List[str]):
         self.classes = classes

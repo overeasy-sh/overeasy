@@ -97,7 +97,7 @@ class QwenVL(MultimodalLLM):
     def release_resources(self):
         del self.model
         del self.tokenizer
-        torch.cuda.empty_cache()
+
 
         
     @log_time

@@ -137,14 +137,13 @@ class GroundingDINO(BoundingBoxModel):
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):
-        if not torch.cuda.is_available():
-            warnings.warn("CUDA not available. GroundingDINO will run very slowly.")
-
         self.box_threshold = box_threshold
         self.text_threshold = text_threshold
         self.model_type = type
         
     def load_resources(self):
+        if DEVICE.type != "cuda":
+            warnings.warn("CUDA not available. GroundingDINO may run slowly.")
         # Redirect grounding dino output to string
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()
@@ -153,12 +152,13 @@ class GroundingDINO(BoundingBoxModel):
         except Exception as e:
             print(f"Error loading GroundingDINO model: {e}")
             print(sys.stdout.getvalue())
+            sys.stdout = original_stdout
+            raise e
         finally:
             sys.stdout = original_stdout
             
     def release_resources(self):
         self.grounding_dino_model = None
-        torch.cuda.empty_cache()
     
     @log_time
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=None, text_threshold=None) -> Detections:
@@ -166,7 +166,7 @@ class GroundingDINO(BoundingBoxModel):
             box_threshold = self.box_threshold
         if text_threshold is None:
             text_threshold = self.text_threshold
-    
+        
         if isinstance(image, Image.Image):
             image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
