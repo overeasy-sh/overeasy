@@ -93,6 +93,8 @@ class ExecutionGraph:
         
     
     def parent_of(self, node: ExecutionNode) -> ExecutionNode:
+        if node.id not in self.parent:
+            raise ValueError(f"Node {node.id} has no parent")
         parent_list = self.parent[node.id]
         if len(parent_list) > 1:
             print("Multiple parents", parent_list)

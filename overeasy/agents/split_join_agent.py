@@ -51,8 +51,8 @@ Graph Representation:
 """
 def find_immediate_children(start: List[ExecutionNode], graph: ExecutionGraph):
     parents = [x for x in start]
+
     while True:
-        parents = [graph.parent_of(item) for item in parents]
         if len(parents) == 0:
             raise ValueError("No parents found")
         some_have_parents = any(parent.parent_detection is not None for parent in parents)
@@ -63,6 +63,9 @@ def find_immediate_children(start: List[ExecutionNode], graph: ExecutionGraph):
         
         if all_have_parents:
             break
+        
+        parents = [graph.parent_of(item) for item in parents]
+
     return parents
         
 def combine_detections(dets: List[Detections], parent_dets: List[Detections]) -> Detections:
@@ -114,12 +117,14 @@ def combine_detections(dets: List[Detections], parent_dets: List[Detections]) ->
    
    
     return Detections.empty()
-    
+
+
 class JoinAgent(Agent):
     # Mutates the input graph by adding a new layer of child nodes
     @log_time
-    def join(self, start: List[ExecutionNode], graph:ExecutionGraph) -> List[ExecutionNode]:
+    def join(self, start: List[ExecutionNode], graph: ExecutionGraph) -> List[ExecutionNode]:
         leaves = []
+        
         def merge_nodes(node_and_parent_det: List[Tuple[ExecutionNode, Detections]], parent: ExecutionNode):
             if len(node_and_parent_det) == 0:
                 return
@@ -136,13 +141,13 @@ class JoinAgent(Agent):
                 graph.add_child(node, merged_node)
             leaves.append(merged_node)
 
-        
         immediate_children = find_immediate_children(start, graph)
+        
         parent_dets = [child.parent_detection for child in immediate_children]
         parents = [graph.parent_of(child) for child in immediate_children]
 
         current_parent_id = None
-        current_group : List[Tuple[ExecutionNode, Detections]] = []
+        current_group: List[Tuple[ExecutionNode, Detections]] = []
         for cur, parent_det, parent in sorted(zip(start, parent_dets, parents), key=lambda x: x[-1].id):
             if parent.id != current_parent_id:
                 merge_nodes(current_group, parent)
@@ -158,5 +163,3 @@ class JoinAgent(Agent):
 
     def __repr__(self):
         return f"{self.__class__.__name__}()"
-  
-

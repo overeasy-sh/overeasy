@@ -61,11 +61,15 @@ def load_detic_model(classes : List[str]):
         args.output = None
         args.webcam = None
         args.video_input = None
-        args.custom_vocabulary = ", ".join(classes).rstrip(",")
+        args.custom_vocabulary = ",".join(classes).rstrip(",")
         args.pred_all_class = False
         cfg = setup_cfg(args)
 
         from detic.predictor import VisualizationDemo
+        from detectron2.data import MetadataCatalog
+        for key in MetadataCatalog.list():
+            MetadataCatalog.remove(key)
+
         # https://github.com/facebookresearch/Detic/blob/main/detic/predictor.py#L39
         demo = VisualizationDemo(cfg, args)
         return demo
