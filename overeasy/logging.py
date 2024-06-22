@@ -13,8 +13,14 @@ def log_time(func: Callable[..., Any]) -> Callable[..., Any]:
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
 
-        function_stats[func.__name__]["count"] += 1
-        function_stats[func.__name__]["total_time"] += end_time - start_time
+        if args and hasattr(args[0], '__class__'):
+            name = f"{args[0].__class__.__name__}.{func.__name__}"
+        else:
+            name = func.__qualname__
+        
+        
+        function_stats[name]["count"] += 1
+        function_stats[name]["total_time"] += end_time - start_time
 
         return result
     return wrapper

@@ -9,11 +9,16 @@ from typing import List, Union
 from overeasy.types import Detections
 from enum import Enum 
 from overeasy.types import BoundingBoxModel
-from overeasy.logging import log_time
 import warnings
 import sys, io
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
+warnings.filterwarnings("ignore", category=FutureWarning, message="The `device` argument is deprecated and will be removed in v5 of Transformers.")
+# Suppress UserWarning about use_reentrant parameter in torch.utils.checkpoint
+warnings.filterwarnings("ignore", message="torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. In version 2.4 we will raise an exception if use_reentrant is not passed. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.", category=UserWarning, module='torch.utils.checkpoint')
+# Suppress UserWarning about None of the inputs having requires_grad=True
+warnings.filterwarnings("ignore", message="None of the inputs have requires_grad=True. Gradients will be None", category=UserWarning, module='torch.utils.checkpoint')
+
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,10 +39,10 @@ def load_grounding_dino(model: GroundingDINOModel):
         checkpoint_file = "gdinot-1.8m-odvg.pth"
     elif model == GroundingDINOModel.SwinB:
         config_file = "GroundingDINO_SwinB_cfg.py"
-        checkpoint_file = "groundingdino_swinb.pth"
+        checkpoint_file = "groundingdino_swinb_cogcoor.pth"
     elif model == GroundingDINOModel.SwinT:
-        config_file = "GroundingDINO_SwinT_cfg.py"
-        checkpoint_file = "groundingdino_swint.pth"
+        config_file = "GroundingDINO_SwinT_OGC.py"
+        checkpoint_file = "groundingdino_swint_ogc.pth"
 
     config_path = os.path.join(
         GROUNDING_DINO_CACHE_DIR, config_file
@@ -60,19 +65,21 @@ def load_grounding_dino(model: GroundingDINOModel):
 
         if not os.path.exists(checkpoint_path):
             if model == GroundingDINOModel.Pretrain_1_8M:
-                url = f"https://github.com/longzw1997/Open-GroundingDino/releases/download/v0.1.0/{checkpoint_file}"
+                url = f"https://github.com/longzw1997/Open-GroundingDino/releases/download/v0.1.0/gdinot-1.8m-odvg.pth"
             elif model == GroundingDINOModel.SwinT:
-                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/{checkpoint_file}"
+                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
             elif model == GroundingDINOModel.SwinB:
-                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/{checkpoint_file}"
+                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth"
 
             urllib.request.urlretrieve(url, checkpoint_path)
 
         if not os.path.exists(config_path):
             if model == GroundingDINOModel.Pretrain_1_8M:
-                url = f"https://raw.githubusercontent.com/longzw1997/Open-GroundingDino/main/config/{config_file}"
-            else:
-                url = f"https://raw.githubusercontent.com/roboflow/GroundingDINO/main/groundingdino/config/{config_file}"
+                url = f"https://raw.githubusercontent.com/longzw1997/Open-GroundingDino/main/config/cfg_odvg.py"
+            elif model == GroundingDINOModel.SwinT:
+                url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+            elif model == GroundingDINOModel.SwinB:
+                url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinB_cfg.py"
             urllib.request.urlretrieve(url, config_path)
 
         grounding_dino_model = instantiate()
@@ -133,7 +140,7 @@ class GroundingDINO(BoundingBoxModel):
     text_threshold: float
 
     def __init__(
-        self, type: GroundingDINOModel = GroundingDINOModel.Pretrain_1_8M,
+        self, type: GroundingDINOModel = GroundingDINOModel.SwinB,
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):
@@ -160,7 +167,6 @@ class GroundingDINO(BoundingBoxModel):
     def release_resources(self):
         self.grounding_dino_model = None
     
-    @log_time
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=None, text_threshold=None) -> Detections:
         if box_threshold is None:
             box_threshold = self.box_threshold

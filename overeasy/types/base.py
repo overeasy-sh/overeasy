@@ -2,9 +2,11 @@ import itertools
 from typing import Any, Dict, List, Union, Optional, Any
 from abc import ABC, abstractmethod
 from typing import List
+
+from overeasy.logging import log_time
 from .detections import Detections
 from PIL import Image
-from overeasy.visualize_utils import annotate
+from overeasy.visualize_utils import annotate, annotate_with_string
 from dataclasses import dataclass
 from collections import defaultdict
 
@@ -25,8 +27,6 @@ __all__ = [
     "CaptioningModel",
 ]
     
-from matplotlib import pyplot as plt
-import numpy as np
 @dataclass
 class ExecutionNode:
     image: Image.Image
@@ -40,17 +40,7 @@ class ExecutionNode:
         if self.data_is_detections():
             return annotate(self.image, self.data, seed)
         else:
-            fig, ax = plt.subplots()
-            ax.imshow(np.array(self.image))
-            ax.axis('off')
-            data_str = str(self.data)
-            plt.figtext(0.5, 0.01, data_str, wrap=True, horizontalalignment='center', fontsize=12)
-            fig.canvas.draw()  
-            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8) # type: ignore
-            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            plt.close(fig)
-            image = Image.fromarray(data)
-            return image.convert('RGB')
+            return annotate_with_string(self.image, str(self.data))
     
     @property
     def id(self):
@@ -195,7 +185,7 @@ class BoundingBoxModel(Model):
     @abstractmethod
     def detect(self, image: Image.Image, classes: List[str]) -> Detections:
         pass
-    
+     
 class ClassificationModel(Model):
     @abstractmethod
     def classify(self, image: Image.Image, classes: list) -> Detections:
@@ -206,20 +196,42 @@ class Agent(ABC):
     
 class ImageAgent(Agent):
     @abstractmethod
-    def execute(self, image: Image.Image) -> ExecutionNode:
+    def _execute(self, image: Image.Image) -> ExecutionNode:
         pass
-
+    
+    @log_time
+    def execute(self, image: Image.Image) -> ExecutionNode:
+        if not isinstance(image, Image.Image):
+            raise ValueError("ImageAgent received non-image data")
+        return self._execute(image)
+    
 class DetectionAgent(Agent):
     @abstractmethod
-    def execute(self, data: Detections) -> Detections:
+    def _execute(self, data: Detections) -> Detections:
         pass
+    
+    @log_time
+    def execute(self, data: Detections) -> Detections:
+        if not isinstance(data, Detections):
+            raise ValueError("DetectionAgent received non-detection data")
+        return self._execute(data)
     
 class TextAgent(Agent):
     @abstractmethod
-    def execute(self, data: str) -> Any:
+    def _execute(self, data: str) -> Any:
         pass
+    
+    @log_time
+    def execute(self, data: str) -> Any:
+        if not isinstance(data, str):
+            raise ValueError("TextAgent received non-string data")
+        return self._execute(data)
 
 class DataAgent(Agent):
     @abstractmethod
-    def execute(self, node: ExecutionNode) -> ExecutionNode:
+    def _execute(self, node: ExecutionNode) -> ExecutionNode:
         pass
+    
+    @log_time
+    def execute(self, node: ExecutionNode) -> ExecutionNode:
+        return self._execute(node)

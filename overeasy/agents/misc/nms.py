@@ -21,7 +21,7 @@ class NMSAgent(DetectionAgent):
         self.iou_threshold = iou_threshold
         self.score_threshold = score_threshold
         
-    def execute(self, dets: Detections) -> Detections:
+    def _execute(self, dets: Detections) -> Detections:
         if dets.detection_type != DetectionType.BOUNDING_BOX:
             raise ValueError("Only bounding box detections are supported for NMS.")
         return do_nms(dets, self.iou_threshold, self.score_threshold)

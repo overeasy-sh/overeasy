@@ -1,5 +1,6 @@
 import os
 from overeasy import *
+from overeasy.models import OwlV2
 from PIL import Image
 
 workflow = Workflow([

@@ -85,14 +85,10 @@ def check_dependencies():
     overeasy_dir = os.path.expanduser("~/.cache/overeasy")
     os.makedirs(overeasy_dir, exist_ok=True)
 
-    try:
-        import detectron2
-    except:
-        print("INSTALLING detectron2")
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "torch git+https://github.com/facebookresearch/detectron2.git"],
-            check=True
-        )
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "git+https://github.com/facebookresearch/detectron2.git"],
+        check=True
+    )
             
     try:
         os.chdir(overeasy_dir)
@@ -141,11 +137,10 @@ def check_dependencies():
 
 class DETIC(BoundingBoxModel):
     def __init__(self):
-        check_dependencies()
         self.classes = None
         
     def load_resources(self):
-        pass 
+        check_dependencies()
         
     def release_resources(self):
         self.detic_model = None

@@ -4,11 +4,24 @@ import random
 import cv2
 from overeasy.types.detections import Detections, DetectionType
 from typing import Optional
+import matplotlib.pyplot as plt
 
 random.seed(42)
 
 def generate_random_color():
     return (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+
+def annotate_with_string(image: Image.Image, data_str: str) -> Image.Image:
+    fig, ax = plt.subplots()
+    ax.imshow(np.array(image))
+    ax.axis('off')
+    plt.figtext(0.5, 0.01, data_str, wrap=True, horizontalalignment='center', fontsize=12)
+    fig.canvas.draw()  
+    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8) # type: ignore
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    plt.close(fig)
+    image = Image.fromarray(data)
+    return image.convert('RGB')
 
 def annotate(scene: Image.Image, detection: Detections, seed: Optional[int] = None) -> Image.Image:
     if seed is not None:
@@ -39,6 +52,10 @@ def annotate(scene: Image.Image, detection: Detections, seed: Optional[int] = No
     elif detection.detection_type == DetectionType.SEGMENTATION:
         raise NotImplementedError("Segmentation detections are not yet supported.")
     elif detection.detection_type == DetectionType.CLASSIFICATION:
-        raise NotImplementedError("Classification detections are not yet supported.")
+        class_names = detection.class_names
+        if len(class_names) == 1:
+            return annotate_with_string(scene, class_names[0])
+        else:
+            return annotate_with_string(scene, str(class_names))
 
 

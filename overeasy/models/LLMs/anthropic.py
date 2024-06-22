@@ -7,17 +7,10 @@ import io
 import os
 
 class Claude(MultimodalLLM, OCRModel):
-    
-    def __init__(self, model: str = 'claude-3-opus-20240229', api_key: Optional[str] = None):
+    models = ["claude-3-5-sonnet-20240620", "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"]
+    def __init__(self, model: str = 'claude-3-5-sonnet-20240620', api_key: Optional[str] = None):
         self.api_key = api_key if api_key is not None else os.getenv("ANTHROPIC_API_KEY")
         # Support for shortened model names
-        if model == "opus":
-            model = "claude-3-opus-20240229"
-        elif model == "haiku":
-            model = "claude-3-haiku-20240307" 
-        elif model == "sonnet":
-            model = "claude-3-sonnet-20240229"
-            
         self.model = model
 
     def prompt_with_image(self, image: Image.Image, query: str) -> str:
@@ -61,7 +54,7 @@ class Claude(MultimodalLLM, OCRModel):
         return message.content[0].text  # type: ignore
 
     def parse_text(self, image: Image.Image) -> str:
-        return self.prompt_with_image(image, "Read the text from the image.")
+        return self.prompt_with_image(image, "Read the text from the image line by line only output the text.")
     
     def load_resources(self):
         if self.api_key is None:

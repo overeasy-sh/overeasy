@@ -2,11 +2,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation import GenerationConfig
 from PIL import Image
 import tempfile
-from overeasy.logging import log_time
 from overeasy.types import MultimodalLLM
 from typing import Literal
 import importlib
 import torch
+
+from overeasy.types.base import OCRModel
 
 # use bf16
 # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-VL-Chat", device_map="auto", trust_remote_code=True, bf16=True).eval()
@@ -77,7 +78,7 @@ def load_model(model_type: model_TYPE):
     
     return model
 
-class QwenVL(MultimodalLLM):
+class QwenVL(MultimodalLLM, OCRModel):
     
     def __init__(self, model_type: model_TYPE = "bf16"):
         if not torch.cuda.is_available():
@@ -95,12 +96,9 @@ class QwenVL(MultimodalLLM):
             self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
        
     def release_resources(self):
-        del self.model
-        del self.tokenizer
+        self.model = None
+        self.tokenizer = None
 
-
-        
-    @log_time
     def prompt_with_image(self, image : Image.Image, query: str) -> str:
 
         with tempfile.NamedTemporaryFile(suffix=".png") as temp_file:
@@ -112,13 +110,15 @@ class QwenVL(MultimodalLLM):
             response, history = self.model.chat(self.tokenizer, query=query, history=None, max_new_tokens=2048)
             return response
 
-    @log_time
     def prompt(self, query: str) -> str:
         query = self.tokenizer.from_list_format([
             {'text': query},
         ])
         response, history = self.model.chat(self.tokenizer, query=query, history=None, max_new_tokens=2048)
         return response
+    
+    def parse_text(self, image: Image.Image):
+        return self.prompt_with_image(image, "Read the text in this image line by line")
 
     def draw_bbox_on_latest_picture(self, response, history):
         if response.startswith("<ref>") and response.endswith("</ref>"):

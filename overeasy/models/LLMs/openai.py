@@ -7,6 +7,7 @@ import base64
 import requests
 import warnings
 import backoff
+import openai
 
 def encode_image_to_base64(image: Image.Image) -> str:
     buffered = io.BytesIO()
@@ -36,101 +37,100 @@ current_models = [
     "gpt-3.5-turbo-16k-0613"
 ]
 
-class RateLimitError(Exception):
-    pass
 
-@backoff.on_exception(backoff.expo, RateLimitError, max_tries=7)
-def _post(self, url, headers, json):
-    response = requests.post(url, headers=headers, json=json)
-    response.raise_for_status()
-    if response.status_code == 429:
-        raise RateLimitError("Rate limit exceeded, retrying...")
+@backoff.on_exception(backoff.expo, openai.RateLimitError, max_tries=6)
+def _prompt(query: str, model: str, client: openai.OpenAI, max_tokens: int = 1024) -> str:
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "user", "content": query}
+        ],
+        max_tokens=max_tokens
+    )
 
-    return response.json()
+    result = response.choices[0].message.content
+    if result is None:
+        raise ValueError("No content found in response")
+    
+    return result
 
 
-def _prompt(self, query: str, model: str) -> str:
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {self.api_key}"
-    }
-    payload = {
-        "model": model,
-        "prompt": query,
-        "max_tokens": 500
-    }
-
-    response_json = _post("https://api.openai.com/v1/completions", headers=headers, json=payload)
-
-    return response_json['choices'][0]['message']['content'].strip()
 
 class GPT(LLM):
     def __init__(self, api_key: Optional[str] = None, model:str = "gpt-3.5-turbo"):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.model = model
+        self.client = None
         if self.model not in current_models:
             warnings.warn(f"Model {model} may not be supported. Please provide a valid model.")
 
     def prompt(self, query: str) -> str:
-        return _prompt(self, query, self.model)
+        if self.client is None:
+            raise ValueError("Client is not loaded. Please call load_resources() first.")
+        return _prompt(query, self.model, self.client)
     
     def load_resources(self):
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
+        self.client = openai.OpenAI(api_key=self.api_key)
     
     def release_resources(self):
-        super().release_resources()
+        self.client = None
 
 class GPTVision(MultimodalLLM, OCRModel):
     def __init__(self, api_key: Optional[str] = None,
                  model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
                  ):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
-        self.model = "gpt-4-turbo" 
-        
-    def prompt_with_image(self, image: Image.Image, query: str) -> str:
-        base64_image = encode_image_to_base64(image)
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": query
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            "max_tokens": 500
-        }
-        
-        response = _post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-        response_json = response.json()
-        
-        return response_json['choices'][0]['message']['content'].strip()
-
-    def prompt(self, query: str) -> str:
-        return _prompt(self, query, self.model)
-    
-    def parse_text(self, image: Image.Image) -> str:
-        return self.prompt_with_image(image, "Read the text from the image.")
+        self.model = model
+        self.client = None
     
     def load_resources(self):
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key, or set the OPENAI_API_KEY environment variable.")
-        super().load_resources()
+        self.client = openai.OpenAI(api_key=self.api_key)
     
     def release_resources(self):
-        super().release_resources()
+        self.client = None
+        
+    def prompt_with_image(self, image: Image.Image, query: str, max_tokens: int = 1024) -> str:
+        if self.client is None:
+            raise ValueError("Client is not loaded. Please call load_resources() first.")
+        
+        base64_image = encode_image_to_base64(image)
+
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": query
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ]
+
+        
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            max_tokens=max_tokens
+        )
+        
+        result = response.choices[0].message.content
+        if result is None:
+            raise ValueError("No content found in response")        
+        
+        return result
+
+    def prompt(self, query: str) -> str:
+        if self.client is None:
+            raise ValueError("Client is not loaded. Please call load_resources() first.")
+        return _prompt(query, self.model, self.client)
+    
+    def parse_text(self, image: Image.Image) -> str:
+        return self.prompt_with_image(image, "Read the text from the image line by line only output the text.")
+    
