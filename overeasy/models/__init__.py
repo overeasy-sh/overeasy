@@ -4,20 +4,44 @@ from .recognition import *
 from .LLMs import *
 from .classification import *
 
+bounding_box_models = [    
+    GroundingDINO(type=GroundingDINOModel.Pretrain_1_8M),
+    GroundingDINO(type=GroundingDINOModel.SwinB),
+    GroundingDINO(type=GroundingDINOModel.SwinT),
+    YOLOWorld(model="yolov8s-worldv2"),
+    YOLOWorld(model="yolov8m-worldv2"),
+    YOLOWorld(model="yolov8l-worldv2"),
+    YOLOWorld(model="yolov8s-world"),
+    YOLOWorld(model="yolov8m-world"),
+    YOLOWorld(model="yolov8l-world"),
+    OwlV2(),
+]
 
 
 
 def warmup_models():
-    qwen = QwenVL()
-    del qwen
-    dino = GroundingDINO()
-    del dino
-    detic = DETIC()
-    del detic
-    owlv2 = OwlV2()
-    del owlv2
-    yoloworld = YOLOWorld()
-    del yoloworld
+    try:
+        qwen = QwenVL()
+        qwen.load_resources()
+        del qwen
+    except:
+        print("Skipping QwenVL")
+        
+    try:
+        detic = DETIC()
+        detic.load_resources()
+        detic.set_classes(["hi"])
+        del detic
+    except:
+        print("Skipping DETIC")
+   
+    
+    for bounding_box_model in bounding_box_models:
+        bounding_box_model.load_resources()
+        del bounding_box_model
+        
+    
+    
     clip = CLIP()
     del clip
     laionclip = LaionCLIP()
