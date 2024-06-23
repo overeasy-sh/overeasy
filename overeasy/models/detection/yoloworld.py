@@ -30,20 +30,19 @@ def get_yoloworld_model(model: str) -> str:
 
 # Load a pretrained YOLOv8s-worldv2 model
 class YOLOWorld(BoundingBoxModel):
-    
     def __init__(self, model: str = "yolov8l-worldv2"):
-        self.model_path = get_yoloworld_model(model)
-
+        self.model_name = model
+    
     def load_resources(self):
+        self.model_path = get_yoloworld_model(self.model_name)
         self.model = YOLOWorld_ultralytics(self.model_path)
 
     def release_resources(self):
         self.model = None
 
-    def detect(self, image: Image.Image, classes: List[str], box_threshold=0, text_threshold=0) -> Detections:
+    def detect(self, image: Image.Image, classes: List[str]) -> Detections:
         self.model.set_classes(classes)
         results = self.model.predict(image, verbose=False)
         detections = Detections.from_ultralytics(results[0])
-        # detections = detections[detections.confidence > box_threshold]
         return detections
     

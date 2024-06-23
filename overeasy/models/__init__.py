@@ -4,20 +4,6 @@ from .recognition import *
 from .LLMs import *
 from .classification import *
 
-bounding_box_models = [    
-    GroundingDINO(type=GroundingDINOModel.Pretrain_1_8M),
-    GroundingDINO(type=GroundingDINOModel.SwinB),
-    GroundingDINO(type=GroundingDINOModel.SwinT),
-    YOLOWorld(model="yolov8s-worldv2"),
-    YOLOWorld(model="yolov8m-worldv2"),
-    YOLOWorld(model="yolov8l-worldv2"),
-    YOLOWorld(model="yolov8s-world"),
-    YOLOWorld(model="yolov8m-world"),
-    YOLOWorld(model="yolov8l-world"),
-    OwlV2(),
-]
-
-
 
 def warmup_models():
     try:
@@ -34,7 +20,19 @@ def warmup_models():
         del detic
     except:
         print("Skipping DETIC")
-   
+    
+    bounding_box_models = [    
+    GroundingDINO(type=GroundingDINOModel.Pretrain_1_8M),
+    GroundingDINO(type=GroundingDINOModel.SwinB),
+    GroundingDINO(type=GroundingDINOModel.SwinT),
+    YOLOWorld(model="yolov8s-worldv2"),
+    YOLOWorld(model="yolov8m-worldv2"),
+    YOLOWorld(model="yolov8l-worldv2"),
+    YOLOWorld(model="yolov8s-world"),
+    YOLOWorld(model="yolov8m-world"),
+    YOLOWorld(model="yolov8l-world"),
+    OwlV2(),
+]
     
     for bounding_box_model in bounding_box_models:
         bounding_box_model.load_resources()
