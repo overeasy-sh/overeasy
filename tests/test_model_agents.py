@@ -9,7 +9,8 @@ import os
 ROOT = os.path.dirname(__file__)
 OUTPUT_DIR = os.path.join(ROOT, "outputs")
 
-bounding_box_models = [
+bounding_box_models = [    
+    DETIC(),
     GroundingDINO(type=GroundingDINOModel.Pretrain_1_8M),
     GroundingDINO(type=GroundingDINOModel.SwinB),
     GroundingDINO(type=GroundingDINOModel.SwinT),
@@ -20,7 +21,6 @@ bounding_box_models = [
     YOLOWorld(model="yolov8m-world"),
     YOLOWorld(model="yolov8l-world"),
     OwlV2(),
-    DETIC()
 ]
 multimodal_llms = [
     GPTVision(model="gpt-4o"), 

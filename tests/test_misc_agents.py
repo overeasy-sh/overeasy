@@ -18,8 +18,6 @@ def test_pad_crop_agent(pad_crop_workflow: Workflow, count_eggs_image):
     width, height = count_eggs_image.size
     result, graph = pad_crop_workflow.execute(count_eggs_image)
     image = result[0].image
-    print("Old image size: ", (width, height))
-    print("New image size: ", image.size)
     assert image.size == (width//2 + 20, height//2 + 20), "Incorrect pad crop size"
 
 def test_split_crop_agent(split_crop_workflow: Workflow, count_eggs_image):
@@ -44,7 +42,6 @@ def test_map_agent(map_agent_workflow: Workflow, count_eggs_image):
     result, graph = map_agent_workflow.execute(count_eggs_image)
     response = result[0].data
     assert isinstance(response, np.ndarray)
-    print("DETECTIONS: ", response)
     assert len(response) > 0, "Map agent failed"
 
 def test_to_classification_agent(to_classification_workflow: Workflow, count_eggs_image):
@@ -57,9 +54,8 @@ def test_filter_classes_agent(filter_classes_workflow: Workflow, count_eggs_imag
     result, graph = filter_classes_workflow.execute(count_eggs_image)
     detections = result[0].data
     assert isinstance(detections, Detections)
-    print(detections)
-    classes  = list(set(detections.class_names))
-    assert np.array_equal(classes, ["a single egg"]), "Filter classes agent failed"
+    result  = list(set(detections.class_names))
+    assert np.array_equal(result, ["a single egg"]), "Filter classes agent failed"
 
 def test_confidence_filter_agent(confidence_filter_workflow: Workflow, count_eggs_image):
     result, graph = confidence_filter_workflow.execute(count_eggs_image)
