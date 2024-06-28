@@ -29,9 +29,6 @@ class FilterClassesAgent(DetectionAgent):
         else:
             raise ValueError("No filter specified")
         
-        print(dets.xyxy.shape)
-        print(dets.class_ids.shape)
-        print(slice.shape)
         return dets[slice]
     
     def __repr__(self):

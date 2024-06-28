@@ -149,8 +149,8 @@ class GroundingDINO(BoundingBoxModel):
         self.model_type = type
         
     def load_resources(self):
-        if DEVICE.type != "cuda":
-            warnings.warn("CUDA not available. GroundingDINO may run slowly.")
+        # if DEVICE.type != "cuda":
+        #     warnings.warn("CUDA not available. GroundingDINO may run slowly.")
         # Redirect grounding dino output to string
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()

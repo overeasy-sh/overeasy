@@ -16,6 +16,8 @@ __all__ = [
     "MultimodalLLM",
     "BoundingBoxModel",
     "ExecutionNode",
+    "NullExecutionNode",
+    "Node",
     "ExecutionGraph",
     "Model",
     "Agent",
@@ -47,17 +49,30 @@ class ExecutionNode:
         return id(self)
     
 @dataclass
+class NullExecutionNode():
+    parent_detection: Optional[Detections] = None
+    
+    @property
+    def id(self):
+        return id(self)
+    
+Node = Union[ExecutionNode, NullExecutionNode]
+    
+@dataclass
 class ExecutionGraph:
     root: ExecutionNode
-    edges: Dict[int, List[ExecutionNode]]
-    parent: Dict[int, List[ExecutionNode]]
+    edges: Dict[int, List[Node]]
+    parent: Dict[int, List[Node]]
     
     def __init__(self, root: ExecutionNode):
         self.root = root
         self.edges = {}
         self.parent = {}
     
-    def add_child(self, parent: ExecutionNode, child: ExecutionNode):
+    def add_child(self, parent: Node, child: Node):
+        assert isinstance(parent, ExecutionNode) or isinstance(parent, NullExecutionNode)
+        assert isinstance(child, ExecutionNode) or isinstance(child, NullExecutionNode)
+        
         if parent.id == child.id:
             raise ValueError("Cannot self loops to execution graph")
         
@@ -92,7 +107,7 @@ class ExecutionGraph:
         print_node(self.root)
         
     
-    def parent_of(self, node: ExecutionNode) -> ExecutionNode:
+    def parent_of(self, node: Node) -> Node:
         if node.id not in self.parent:
             raise ValueError(f"Node {node.id} has no parent")
         parent_list = self.parent[node.id]
@@ -101,14 +116,20 @@ class ExecutionGraph:
             raise ValueError("Node has multiple parents")
         return self.parent[node.id][0]
     
-    def __getitem__(self, node: ExecutionNode) -> List[ExecutionNode]:
+    def children(self, node: Node) -> List[Node]:
+        if node.id not in self.edges:
+            raise ValueError(f"Node {node.id} has no children")
+        
+        return self.edges[node.id]
+    
+    def __getitem__(self, node: Node) -> List[Node]:
         return self.edges[node.id]
     
     def __repr__(self):
         return f"ExecutionGraph(root={self.root}, edges={self.edges}, parent={self.parent})"
     
-                    
-    def top_sort(self) -> List[List[ExecutionNode]]:
+    # TODO: This does a lot of heavy lifting so it should have some more strict ordering properties                    
+    def top_sort(self) -> List[List[Node]]:
         # Create a copy of the edges dictionary to avoid mutating the original
         if len(self.edges) == 0:
             return [[self.root]] 
@@ -122,7 +143,7 @@ class ExecutionGraph:
                 in_degree[node.id] += 1
         
         # Initialize the queue with nodes having in-degree 0
-        queue = [node for node in [self.root] if in_degree[node.id] == 0]
+        queue : List[Node] = [node for node in [self.root] if in_degree[node.id] == 0]
         
         # Initialize the sorted nodes list
         sorted_nodes = []
@@ -231,9 +252,9 @@ class TextAgent(Agent):
 
 class DataAgent(Agent):
     @abstractmethod
-    def _execute(self, node: ExecutionNode) -> ExecutionNode:
+    def _execute(self, data: Any) -> Any:
         pass
     
     @log_time
-    def execute(self, node: ExecutionNode) -> ExecutionNode:
-        return self._execute(node)
+    def execute(self, data: Any) -> Any:
+        return self._execute(data)

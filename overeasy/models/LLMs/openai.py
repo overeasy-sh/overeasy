@@ -75,7 +75,7 @@ class GPT(LLM):
     def release_resources(self):
         self.client = None
 
-class GPTVision(MultimodalLLM, OCRModel):
+class GPTVision(MultimodalLLM, OCRModel, GPT):
     def __init__(self, api_key: Optional[str] = None,
                  model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
                  ):
@@ -83,11 +83,11 @@ class GPTVision(MultimodalLLM, OCRModel):
         self.model = model
         self.client = None
     
-    def load_resources(self):
-        self.client = openai.OpenAI(api_key=self.api_key)
+    # def load_resources(self):
+    #     self.client = openai.OpenAI(api_key=self.api_key)
     
-    def release_resources(self):
-        self.client = None
+    # def release_resources(self):
+    #     self.client = None
         
     def prompt_with_image(self, image: Image.Image, query: str, max_tokens: int = 1024) -> str:
         if self.client is None:
@@ -126,11 +126,6 @@ class GPTVision(MultimodalLLM, OCRModel):
         
         return result
 
-    def prompt(self, query: str) -> str:
-        if self.client is None:
-            raise ValueError("Client is not loaded. Please call load_resources() first.")
-        return _prompt(query, self.model, self.client)
-    
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image line by line only output the text.")
     

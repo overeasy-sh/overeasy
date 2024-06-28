@@ -12,6 +12,18 @@ class Claude(MultimodalLLM, OCRModel):
         self.api_key = api_key if api_key is not None else os.getenv("ANTHROPIC_API_KEY")
         # Support for shortened model names
         self.model = model
+        self.client = None
+
+    def load_resources(self):
+        if self.api_key is None:
+            raise ValueError("No API key found. Please provide an API key, or set the ANTHROPIC_API_KEY environment variable.")
+        self.client = anthropic.Anthropic(api_key=self.api_key)
+
+        super().load_resources()
+    
+    def release_resources(self):
+        self.client = None
+        super().release_resources()
 
     def prompt_with_image(self, image: Image.Image, query: str) -> str:
         buffered = io.BytesIO()
@@ -56,13 +68,3 @@ class Claude(MultimodalLLM, OCRModel):
     def parse_text(self, image: Image.Image) -> str:
         return self.prompt_with_image(image, "Read the text from the image line by line only output the text.")
     
-    def load_resources(self):
-        if self.api_key is None:
-            raise ValueError("No API key found. Please provide an API key, or set the ANTHROPIC_API_KEY environment variable.")
-        self.client = anthropic.Anthropic(api_key=self.api_key)
-
-        super().load_resources()
-    
-    def release_resources(self):
-        self.client = None
-        super().release_resources()

@@ -1,8 +1,8 @@
 from PIL import Image
+from torch import mode
 from overeasy.models import *
 from overeasy.types import *
 from pydantic import BaseModel
-from openai import OpenAI
 from typing import List, Union, Optional, Any
 import instructor
 import base64, io
@@ -98,7 +98,7 @@ class BinaryChoiceAgent(ImageAgent):
         return f"{self.__class__.__name__}(query={self.query}, model={model_name})"
 
 class ClassificationAgent(ImageAgent):
-    def __init__(self, classes, model: ClassificationModel = LaionCLIP()):
+    def __init__(self, classes, model: ClassificationModel = CLIP()):
         self.classes = classes
         self.model = model 
 
@@ -124,20 +124,43 @@ class OCRAgent(ImageAgent):
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+options  = Union[GPTVision, Gemini, Claude]
+
+
+
 class InstructorImageAgent(ImageAgent):
-    def __init__(self, response_model: type[BaseModel], model: Optional[str] = "gpt-4o"):
-        self.model = model
+
+    def __init__(self, response_model: type[BaseModel], model: Union[GPTVision, Gemini, Claude] = GPTVision()):
         self.response_model = response_model
+        self.model = model
+        if not isinstance(self.model, GPTVision) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
+            raise ValueError("Model must be a GPTVision, Gemini, or Claude")
 
     def _execute(self, image: Image.Image)-> ExecutionNode:
-        client = instructor.from_openai(OpenAI())
+        model_name = ""
+        model_client = self.model.client
+        if model_client is None:
+            raise ValueError("No client found. Please call load_resources() on model")
+        
+        if isinstance(self.model, GPTVision):
+            client = instructor.from_openai(model_client)
+            model_name = self.model.model
+        elif isinstance(self.model, Gemini):
+            client = instructor.from_gemini(model_client)
+            model_name = self.model.model_name
+        elif isinstance(self.model, Claude):
+            client = instructor.from_anthropic(model_client)
+            model_name = self.model.model
+            
+            
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
         base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         # Extract structured data from natural language
         structured_response: Any = client.chat.completions.create(
-            model=self.model,
+            model=model_name,
             response_model=self.response_model,
             messages=[{"role": "user", "content": [
                 {
@@ -153,18 +176,33 @@ class InstructorImageAgent(ImageAgent):
     
     def __repr__(self):
         model_name = self.model
-        return f"{self.__class__.__name__}(response_model={self.response_model}, model={model_name})"
+        return f"{self.__class__.__name__}(response_model={self.response_model}, model={repr(model_name)})"
     
-class InstructorTextAgent(TextAgent):
-    def __init__(self, response_model: type[BaseModel], model: Optional[str] = "gpt-3.5-turbo"):
-        self.model = model
-        self.response_model = response_model
 
+class InstructorTextAgent(TextAgent):
+    def __init__(self, response_model: type[BaseModel], model: Union[GPT, Gemini, Claude] = GPT()):
+        self.response_model = response_model
+        self.model = model
+        if not isinstance(self.model, GPT) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
+            raise ValueError("Model must be a GPT, Gemini, or Claude")
+        
     def _execute(self, text: str)-> Any:
-        client = instructor.from_openai(OpenAI())
+        model_client = self.model.client
+        if model_client is None:
+            raise ValueError("No client found. Please call load_resources() on model")
+        
+        if isinstance(self.model, GPT):
+            client = instructor.from_openai(model_client)
+            model_name = self.model.model
+        elif isinstance(self.model, Gemini):
+            client = instructor.from_gemini(model_client)
+            model_name = self.model.model_name
+        elif isinstance(self.model, Claude):
+            client = instructor.from_anthropic(model_client)
+            model_name = self.model.model
 
         structured_response = client.chat.completions.create(
-            model=self.model,
+            model=model_name,
             messages=[
                 {"role": "user", "content": text},
             ],
@@ -175,5 +213,5 @@ class InstructorTextAgent(TextAgent):
 
     def __repr__(self):
         model_name = self.model
-        return f"{self.__class__.__name__}(response_model={self.response_model}, model={model_name})"
+        return f"{self.__class__.__name__}(response_model={self.response_model}, model={repr(model_name)})"
  
