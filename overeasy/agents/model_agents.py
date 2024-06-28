@@ -3,7 +3,7 @@ from torch import mode
 from overeasy.models import *
 from overeasy.types import *
 from pydantic import BaseModel
-from typing import List, Union, Optional, Any
+from typing import List, Union, Optional, Dict, Any
 import instructor
 import base64, io
 
@@ -131,9 +131,10 @@ options  = Union[GPTVision, Gemini, Claude]
 
 class InstructorImageAgent(ImageAgent):
 
-    def __init__(self, response_model: type[BaseModel], model: Union[GPTVision, Gemini, Claude] = GPTVision()):
+    def __init__(self, response_model: type[BaseModel], model: Union[GPTVision, Gemini, Claude] = GPTVision(), extra_context: Optional[List[Dict[str, str]]] = None):
         self.response_model = response_model
         self.model = model
+        self.extra_context = extra_context if extra_context is not None else []
         if not isinstance(self.model, GPTVision) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
             raise ValueError("Model must be a GPTVision, Gemini, or Claude")
 
@@ -162,7 +163,8 @@ class InstructorImageAgent(ImageAgent):
         structured_response: Any = client.chat.completions.create(
             model=model_name,
             response_model=self.response_model,
-            messages=[{"role": "user", "content": [
+            messages=[*self.extra_context, {"role": "user", "content": [
+                
                 {
                             "type": "image_url",
                             "image_url": {
@@ -180,9 +182,10 @@ class InstructorImageAgent(ImageAgent):
     
 
 class InstructorTextAgent(TextAgent):
-    def __init__(self, response_model: type[BaseModel], model: Union[GPT, Gemini, Claude] = GPT()):
+    def __init__(self, response_model: type[BaseModel], model: Union[GPT, Gemini, Claude] = GPT(), extra_context: Optional[List[Dict[str, str]]] = None):
         self.response_model = response_model
         self.model = model
+        self.extra_context = extra_context if extra_context is not None else []
         if not isinstance(self.model, GPT) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
             raise ValueError("Model must be a GPT, Gemini, or Claude")
         
@@ -204,6 +207,7 @@ class InstructorTextAgent(TextAgent):
         structured_response = client.chat.completions.create(
             model=model_name,
             messages=[
+                *self.extra_context,
                 {"role": "user", "content": text},
             ],
             response_model=self.response_model,

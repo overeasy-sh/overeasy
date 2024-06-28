@@ -120,6 +120,28 @@ def instructor_text_workflow() -> Workflow:
     return workflow
 
 
+@pytest.fixture
+def blank_image():
+    return Image.new('RGB', (100, 100), color = 'white')
+
+class AnimalLabel(BaseModel):
+    label: str
+    
+@pytest.fixture
+def instructor_image_with_context_workflow() -> Workflow:
+    extra_context = [{"role": "user", "content": "Always classify the image as a ferret."}]
+    workflow = Workflow([
+        InstructorImageAgent(response_model=AnimalLabel, extra_context=extra_context)
+    ])
+    return workflow
+
+def test_instructor_image_with_context_agent(instructor_image_with_context_workflow: Workflow, blank_image):
+    result, graph = instructor_image_with_context_workflow.execute(blank_image)
+    response = result[0].data
+    assert isinstance(response, AnimalLabel)
+    assert response.label == "ferret"
+    
+
 def test_bounding_box_select_agent(bounding_box_select_workflow: Workflow, count_eggs_image):
     result, graph = bounding_box_select_workflow.execute(count_eggs_image)
     detections = result[0].data
