@@ -24,7 +24,7 @@ class Gemini(MultimodalLLM, OCRModel):
             warnings.warn("No API key found. Using Gemini free tier. For higher usage please provide an API key, or set the GOOGLE_API_KEY environment variable.")
         else:
             genai.configure(api_key=self.api_key)
-        self.client = genai.GenerativeModel(self.model_name)
+        self.client = genai.GenerativeModel(model_name=self.model_name)
 
         
     def release_resources(self):

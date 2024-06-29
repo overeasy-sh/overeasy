@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import List, Union, Optional, Dict, Any
 import instructor
 import base64, io
+import google.generativeai as genai
 
 __all__ = [
     "BoundingBoxSelectAgent",
@@ -131,10 +132,11 @@ options  = Union[GPTVision, Gemini, Claude]
 
 class InstructorImageAgent(ImageAgent):
 
-    def __init__(self, response_model: type[BaseModel], model: Union[GPTVision, Gemini, Claude] = GPTVision(), extra_context: Optional[List[Dict[str, str]]] = None):
+    def __init__(self, response_model: type[BaseModel], model: Union[GPTVision, Gemini, Claude] = GPTVision(), max_tokens: int = 4096, extra_context: Optional[List[Dict[str, str]]] = None):
         self.response_model = response_model
         self.model = model
         self.extra_context = extra_context if extra_context is not None else []
+        self.max_tokens = max_tokens
         if not isinstance(self.model, GPTVision) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
             raise ValueError("Model must be a GPTVision, Gemini, or Claude")
 
@@ -154,25 +156,59 @@ class InstructorImageAgent(ImageAgent):
             client = instructor.from_anthropic(model_client)
             model_name = self.model.model
             
-            
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
-
-        # Extract structured data from natural language
-        structured_response: Any = client.chat.completions.create(
-            model=model_name,
-            response_model=self.response_model,
-            messages=[*self.extra_context, {"role": "user", "content": [
-                
-                {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            }
-                }
+        
+        if isinstance(self.model, Gemini):
+            structured_response: Any = client.chat.completions.create(
+                response_model=self.response_model,
+                messages=[*self.extra_context, {"role": "user", "parts": [
+                    image
                 ]}],
-        )
+                max_tokens=self.max_tokens,
+            )
+        elif isinstance(self.model, GPTVision):
+            buffered = io.BytesIO()
+            image.save(buffered, format="PNG")
+            base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+            messages = [*self.extra_context, {"role": "user", "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}"
+                        }
+                    }
+                    ]}]
+            structured_response: Any = client.chat.completions.create(
+                model=model_name,
+                response_model=self.response_model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+            )
+        else:
+            buffered = io.BytesIO()
+            image.save(buffered, format="PNG")
+            base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+            messages = [*self.extra_context, {"role": "user", "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": base64_image
+                        }
+                    }
+                    ]}]
+            
+            structured_response: Any = client.chat.completions.create(
+                model=model_name,
+                response_model=self.response_model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+            )
+            
+            
+        
 
         return ExecutionNode(image, structured_response)
     
@@ -182,10 +218,11 @@ class InstructorImageAgent(ImageAgent):
     
 
 class InstructorTextAgent(TextAgent):
-    def __init__(self, response_model: type[BaseModel], model: Union[GPT, Gemini, Claude] = GPT(), extra_context: Optional[List[Dict[str, str]]] = None):
+    def __init__(self, response_model: type[BaseModel], model: Union[GPT, Gemini, Claude] = GPT(), max_tokens: int = 4096, extra_context: Optional[List[Dict[str, str]]] = None):
         self.response_model = response_model
         self.model = model
         self.extra_context = extra_context if extra_context is not None else []
+        self.max_tokens = max_tokens
         if not isinstance(self.model, GPT) and not isinstance(self.model, Gemini) and not isinstance(self.model, Claude):
             raise ValueError("Model must be a GPT, Gemini, or Claude")
         
@@ -204,14 +241,22 @@ class InstructorTextAgent(TextAgent):
             client = instructor.from_anthropic(model_client)
             model_name = self.model.model
 
-        structured_response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                *self.extra_context,
-                {"role": "user", "content": text},
-            ],
-            response_model=self.response_model,
-        )
+        if isinstance(self.model, Gemini):
+            structured_response = client.chat.completions.create(
+                response_model=self.response_model,
+                messages=[*self.extra_context, {"role": "user", "parts": [
+                    text
+                ]}],
+                max_tokens=self.max_tokens,
+            )
+        else:
+            structured_response = client.chat.completions.create(
+                model=model_name,
+                messages=[*self.extra_context, {"role": "user", "content": text}],
+                response_model=self.response_model,
+                max_tokens=self.max_tokens,
+            )
+            
 
         return structured_response
 

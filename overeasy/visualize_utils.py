@@ -28,7 +28,7 @@ def annotate(scene: Image.Image, detection: Detections, seed: Optional[int] = No
         random.seed(seed)
 
     def draw_bounding_boxes(image: Image.Image, boxes, class_ids, class_names):
-        cv2_image = np.array(image)
+        cv2_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         image_height, image_width = cv2_image.shape[:2]
         scale = np.sqrt(image_height * image_width) / 200
 
