@@ -81,7 +81,6 @@ def test_execute_multiple(split_workflow: Workflow, count_eggs_image):
         for single_layer, multi_layer in zip(single_layers, multi_layers):
             assert len(single_layer) == len(multi_layer), "Each layer should have the same number of nodes"
 
-    print("execute and execute_multiple produce consistent results")
     
 @pytest.fixture
 def split_workflow() -> Workflow:
@@ -173,8 +172,6 @@ def filter_split_join_workflow() -> Workflow:
     return workflow
 
 def test_many_split_joins1(count_eggs_image):
-    print("Starting test_many_split_joins1")
-
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"], model=OwlV2()),
         SplitAgent(),
@@ -192,8 +189,6 @@ def test_many_split_joins1(count_eggs_image):
     assert images_are_equal(result[0].image, count_eggs_image), "Image should be the same"
 
 def test_many_split_joins2(count_eggs_image):
-    print("Starting test_many_split_joins2")
-
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"], model=OwlV2()),
         SplitAgent(),
@@ -213,7 +208,6 @@ def test_many_split_joins2(count_eggs_image):
 
 
 def test_many_split_joins3(dense_street_images):
-    print("Starting test_many_split_joins3")
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"]),
         PadCropAgent.from_uniform_padding(padding=25),

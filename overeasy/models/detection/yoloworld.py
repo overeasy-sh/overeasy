@@ -17,7 +17,6 @@ def get_yoloworld_model(model: str) -> str:
     if os.path.exists(local_model_path):
         return local_model_path
     
-    print(f"Downloading {model} model...")
     url = None
     if model in valid_models:
         url = f"https://github.com/ultralytics/assets/releases/download/v8.2.0/{model}.pt"

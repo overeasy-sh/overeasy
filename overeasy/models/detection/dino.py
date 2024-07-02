@@ -171,11 +171,9 @@ class GroundingDINO(BoundingBoxModel):
         sys.stdout = io.StringIO()
         try:
             self.grounding_dino_model = load_grounding_dino(model=self.model_type)
-            print(sys.stdout.getvalue())
         except Exception as e:
-            print(f"Error loading GroundingDINO model: {e}")
             print(sys.stdout.getvalue())
-            sys.stdout = original_stdout
+            print(f"Error loading GroundingDINO model: {e}")
             raise e
         finally:
             sys.stdout = original_stdout

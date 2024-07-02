@@ -12,7 +12,7 @@ def warmup_models():
         del qwen
     except:
         print("Skipping QwenVL")
-        
+    
     try:
         detic = DETIC()
         detic.load_resources()
@@ -47,3 +47,6 @@ def warmup_models():
     bio = BiomedCLIP()
     del bio
 
+    pali_gemma = PaliGemma()
+    pali_gemma.load_resources()
+    del pali_gemma
