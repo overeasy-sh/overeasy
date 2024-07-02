@@ -12,10 +12,11 @@ from PIL import Image
 import cv2
 from overeasy.types import BoundingBoxModel
 import subprocess
-import urllib.request
+from overeasy.download_utils import atomic_retrieve_and_rename
 
 VOCAB = "custom"
 CONFIDENCE_THRESHOLD = 0.3
+OVEREASY_DIR = os.path.abspath(os.path.expanduser("~/.overeasy"))
 
 
 def setup_cfg(args):
@@ -40,12 +41,12 @@ def setup_cfg(args):
     return cfg
 
 
-def load_detic_model(classes : List[str]):
+def load_detic_model(classes : List[str], weights_file: str):
     original_dir = os.getcwd()
     try:
-        sys.path.insert(0, HOME + "/.cache/overeasy/Detic/third_party/CenterNet2/")
-        sys.path.insert(0, HOME + "/.cache/overeasy/Detic/")
-        os.chdir(HOME + "/.cache/overeasy/Detic/")
+        sys.path.insert(0, os.path.join(OVEREASY_DIR, "Detic/third_party/CenterNet2/"))
+        sys.path.insert(0, os.path.join(OVEREASY_DIR, "Detic/"))
+        os.chdir(os.path.join(OVEREASY_DIR, "Detic/"))
 
         mp.set_start_method("spawn", force=True)
 
@@ -57,7 +58,7 @@ def load_detic_model(classes : List[str]):
         args.config_file = "configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml"
         args.cpu = False if torch.cuda.is_available() else True
         args.opts.append("MODEL.WEIGHTS")
-        args.opts.append("models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth")
+        args.opts.append(weights_file)
         args.output = None
         args.webcam = None
         args.video_input = None
@@ -74,8 +75,8 @@ def load_detic_model(classes : List[str]):
         demo = VisualizationDemo(cfg, args)
         return demo
     finally:
-        sys.path.remove(HOME + "/.cache/overeasy/Detic/third_party/CenterNet2/")
-        sys.path.remove(HOME + "/.cache/overeasy/Detic/")
+        sys.path.remove(os.path.join(OVEREASY_DIR, "Detic/third_party/CenterNet2/"))
+        sys.path.remove(os.path.join(OVEREASY_DIR, "Detic/"))
         os.chdir(original_dir)
 
 
@@ -85,56 +86,51 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def check_dependencies():
     # Create the ~/.cache/overeasy directory if it doesn't exist
-    original_dir = os.getcwd()
-    overeasy_dir = os.path.expanduser("~/.cache/overeasy")
-    os.makedirs(overeasy_dir, exist_ok=True)
-
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "git+https://github.com/facebookresearch/detectron2.git"],
-        check=True
+    os.makedirs(OVEREASY_DIR, exist_ok=True)
+    
+    detic_path = os.path.join(OVEREASY_DIR, "Detic")
+    models_dir = os.path.join(detic_path, "models")
+    model_path = os.path.join(
+        models_dir, "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
     )
-            
-    try:
-        os.chdir(overeasy_dir)
-        # Check if Detic is installed
-        detic_path = os.path.join(overeasy_dir, "Detic")
-        models_dir = os.path.join(detic_path, "models")
-        model_path = os.path.join(
-            models_dir, "Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+    
+    if subprocess.call(["which", "git"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
+        raise EnvironmentError("git is not installed. Please install git to use Detic.")
+    
+    # Check if Detic is installed
+    if not os.path.isdir(detic_path):
+        subprocess.run(
+            [
+                "git",
+                "clone",
+                "https://github.com/facebookresearch/Detic.git",
+                "--recurse-submodules",
+                detic_path
+            ],
+            check=True
         )
-        if not os.path.isdir(detic_path):
+        
+        import platform
+        install_cmds = [sys.executable, "-m", "pip", "install", "git+https://github.com/facebookresearch/detectron2.git", "--no-build-isolation"]
+        if platform.system() == "Darwin":
             subprocess.run(
-                [
-                    "git",
-                    "clone",
-                    "https://github.com/facebookresearch/Detic.git",
-                    "--recurse-submodules",
-                ]
+                ["export", "MACOSX_DEPLOYMENT_TARGET=10.13", "&&", *install_cmds],
+                check=True
+            )
+        else:
+            subprocess.run(
+                install_cmds,
+                check=True
             )
 
-            os.chdir(detic_path)
+        os.makedirs(models_dir, exist_ok=True)
 
-            import platform
-            install_cmds = [sys.executable, "-m", "pip", "install", "git+https://github.com/facebookresearch/detectron2.git", "--no-build-isolation"]
-            if platform.system() == "Darwin":
-                subprocess.run(
-                    ["export", "MACOSX_DEPLOYMENT_TARGET=10.13", "&&", *install_cmds],
-                    check=True
-                )
-            else:
-                subprocess.run(
-                    install_cmds,
-                    check=True
-                )
+        model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+        
+        atomic_retrieve_and_rename(model_url, model_path)
+        
+        return os.path.abspath(model_path)
 
-            os.makedirs(models_dir, exist_ok=True)
-
-            model_url = "https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
-            
-            urllib.request.urlretrieve(model_url, model_path)
-            
-    finally:
-        os.chdir(original_dir)
 
 
 
@@ -144,14 +140,14 @@ class DETIC(BoundingBoxModel):
         self.classes = None
         
     def load_resources(self):
-        check_dependencies()
+        self.weights_file = check_dependencies()
         
     def release_resources(self):
         self.detic_model = None
         
     def set_classes(self, classes: List[str]):
         self.classes = classes
-        self.detic_model = load_detic_model(classes)
+        self.detic_model = load_detic_model(classes, self.weights_file)
         
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=0.35, text_threshold=0.25) -> Detections:
         if self.classes is None:

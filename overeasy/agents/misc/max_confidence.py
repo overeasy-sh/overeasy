@@ -30,7 +30,7 @@ class ConfidenceFilterAgent(DetectionAgent):
         
         if self.min_confidence is not None:
             indices = indices[dets.confidence >= self.min_confidence]
-        
+
         if self.max_n is not None:
             if len(indices) > self.max_n:
                 sorted_indices = np.argsort(dets.confidence[indices])[-self.max_n:][::-1]
@@ -38,7 +38,10 @@ class ConfidenceFilterAgent(DetectionAgent):
             else:
                 indices = np.argsort(dets.confidence[indices])[::-1]
         
-        return dets[indices]
+        if len(indices) == 0:
+            return Detections.empty()
+        
+        return dets[indices.astype(int)]
     
     def __repr__(self):
         return f"{self.__class__.__name__}(max_n={self.max_n}, min_confidence={self.min_confidence})"

@@ -160,9 +160,13 @@ class InstructorImageAgent(ImageAgent):
         if isinstance(self.model, Gemini):
             structured_response: Any = client.chat.completions.create(
                 response_model=self.response_model,
-                messages=[*self.extra_context, {"role": "user", "parts": [
-                    image
-                ]}],
+                messages=[
+                    *self.extra_context,
+                    {
+                        "role": "user",
+                        "content": image
+                    }
+                ],
                 max_tokens=self.max_tokens,
             )
         elif isinstance(self.model, GPTVision):

@@ -5,6 +5,7 @@ from overeasy import Workflow, BoundingBoxSelectAgent, NMSAgent
 from overeasy.models import GroundingDINO, YOLOWorld, OwlV2, DETIC
 from overeasy.types import Detections
 import os
+import sys
 
 ROOT = os.path.dirname(__file__)
 OUTPUT_DIR = os.path.join(ROOT, "outputs")
@@ -46,7 +47,7 @@ def yoloworld_workflow() -> Workflow:
 @pytest.fixture
 def detic_workflow() -> Workflow:
     workflow = Workflow([
-        BoundingBoxSelectAgent(classes=["a single egg"], model=DETIC()),
+        BoundingBoxSelectAgent(classes=["egg"], model=DETIC()),
     ])
     return workflow
 
@@ -72,6 +73,7 @@ def test_owlvit_v2_detection(count_eggs_image, owlvit_v2_workflow: Workflow):
     assert len(detections.xyxy) > 0, "No detections found"
     result[0].visualize().save(os.path.join(OUTPUT_DIR, "owlv2_detection_output.png"))
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Detic is not working on macOS")
 def test_detic_detection(count_eggs_image, detic_workflow: Workflow):
     result, graph = detic_workflow.execute(count_eggs_image)
     detections = result[0].data

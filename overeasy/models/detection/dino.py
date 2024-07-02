@@ -1,5 +1,4 @@
 import os
-import urllib.request
 import cv2
 import numpy as np
 import torch
@@ -11,6 +10,10 @@ from enum import Enum
 from overeasy.types import BoundingBoxModel
 import warnings
 import sys, io
+from overeasy.download_utils import atomic_retrieve_and_rename
+
+
+
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
 warnings.filterwarnings("ignore", category=FutureWarning, message="The `device` argument is deprecated and will be removed in v5 of Transformers.")
@@ -27,7 +30,9 @@ class GroundingDINOModel(Enum):
     SwinB = "swinb"
     SwinT = "swint"
 
-def load_grounding_dino(model: GroundingDINOModel):
+
+
+def download_and_cache_grounding_dino(model: GroundingDINOModel):
     OVEREASY_CACHE_DIR = os.path.expanduser("~/.overeasy")
 
     GROUNDING_DINO_CACHE_DIR = os.path.join(OVEREASY_CACHE_DIR, "groundingdino")
@@ -50,37 +55,47 @@ def load_grounding_dino(model: GroundingDINOModel):
     checkpoint_path = os.path.join(
         GROUNDING_DINO_CACHE_DIR, checkpoint_file
     )
+    
+    if not os.path.exists(GROUNDING_DINO_CACHE_DIR):
+        os.makedirs(GROUNDING_DINO_CACHE_DIR)
+
+    if not os.path.exists(checkpoint_path):
+        if model == GroundingDINOModel.Pretrain_1_8M:
+            url = f"https://github.com/longzw1997/Open-GroundingDino/releases/download/v0.1.0/gdinot-1.8m-odvg.pth"
+        elif model == GroundingDINOModel.SwinT:
+            url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
+        elif model == GroundingDINOModel.SwinB:
+            url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth"
+
+
+        atomic_retrieve_and_rename(url, checkpoint_path)
+
+    if not os.path.exists(config_path):
+        if model == GroundingDINOModel.Pretrain_1_8M:
+            url = f"https://raw.githubusercontent.com/longzw1997/Open-GroundingDino/main/config/cfg_odvg.py"
+        elif model == GroundingDINOModel.SwinT:
+            url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+        elif model == GroundingDINOModel.SwinB:
+            url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinB_cfg.py"
+        
+        atomic_retrieve_and_rename(url, config_path)
+    
+    return config_path, checkpoint_path
+
+def load_grounding_dino(model: GroundingDINOModel):
+    config_path, checkpoint_path = download_and_cache_grounding_dino(model)
+    
     instantiate = lambda: Model(
             model_config_path=config_path,
             model_checkpoint_path=checkpoint_path,
             device=DEVICE,
-        )
+    )
 
     try:
         grounding_dino_model = instantiate()
         return grounding_dino_model
     except Exception:
-        if not os.path.exists(GROUNDING_DINO_CACHE_DIR):
-            os.makedirs(GROUNDING_DINO_CACHE_DIR)
 
-        if not os.path.exists(checkpoint_path):
-            if model == GroundingDINOModel.Pretrain_1_8M:
-                url = f"https://github.com/longzw1997/Open-GroundingDino/releases/download/v0.1.0/gdinot-1.8m-odvg.pth"
-            elif model == GroundingDINOModel.SwinT:
-                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
-            elif model == GroundingDINOModel.SwinB:
-                url = f"https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth"
-
-            urllib.request.urlretrieve(url, checkpoint_path)
-
-        if not os.path.exists(config_path):
-            if model == GroundingDINOModel.Pretrain_1_8M:
-                url = f"https://raw.githubusercontent.com/longzw1997/Open-GroundingDino/main/config/cfg_odvg.py"
-            elif model == GroundingDINOModel.SwinT:
-                url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
-            elif model == GroundingDINOModel.SwinB:
-                url = f"https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinB_cfg.py"
-            urllib.request.urlretrieve(url, config_path)
 
         grounding_dino_model = instantiate()
 
@@ -151,11 +166,12 @@ class GroundingDINO(BoundingBoxModel):
     def load_resources(self):
         # if DEVICE.type != "cuda":
         #     warnings.warn("CUDA not available. GroundingDINO may run slowly.")
-        # Redirect grounding dino output to string
+        download_and_cache_grounding_dino(self.model_type)
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()
         try:
             self.grounding_dino_model = load_grounding_dino(model=self.model_type)
+            print(sys.stdout.getvalue())
         except Exception as e:
             print(f"Error loading GroundingDINO model: {e}")
             print(sys.stdout.getvalue())

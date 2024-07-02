@@ -28,7 +28,33 @@ def dense_street_images():
     return [Image.open(image_path), Image.open(image_path2), Image.open(image_path3)]
 
 
-def test_execute_multiple_comparison(split_workflow: Workflow, count_eggs_image):
+@pytest.fixture
+def split_workflow() -> Workflow:
+    workflow = Workflow([
+        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
+        SplitAgent(),
+    ])
+    return workflow
+
+@pytest.fixture
+def split_join_workflow() -> Workflow:
+    workflow = Workflow([
+        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
+        SplitAgent(),
+        JoinAgent()
+    ])
+    return workflow
+
+@pytest.fixture
+def no_split_workflow() -> Workflow:
+    workflow = Workflow([
+        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
+    ])
+    return workflow
+
+
+
+def test_execute_multiple(split_workflow: Workflow, count_eggs_image):
     # Test with a single image
     single_result, single_graph = split_workflow.execute(count_eggs_image)
     
@@ -58,7 +84,7 @@ def test_execute_multiple_comparison(split_workflow: Workflow, count_eggs_image)
     print("execute and execute_multiple produce consistent results")
     
 @pytest.fixture
-def split_worflow() -> Workflow:
+def split_workflow() -> Workflow:
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
         SplitAgent(),
@@ -81,8 +107,8 @@ def no_split_workflow() -> Workflow:
     ])
     return workflow
 
-def test_split_agent(split_worflow: Workflow, count_eggs_image):
-    result, graph = split_worflow.execute(count_eggs_image)
+def test_split_agent(split_workflow: Workflow, count_eggs_image):
+    result, graph = split_workflow.execute(count_eggs_image)
     assert all(isinstance(x.data, Detections) for x in result), "Split didn't return detections"
     assert isinstance(result, list), "Split didn't return a list"
     assert len(result) > 0, "Didn't return a list of detections"
@@ -111,11 +137,11 @@ def images_are_equal(img1: Image.Image, img2: Image.Image) -> bool:
     
     return np.array_equal(np_img1, np_img2)
 
-def test_splitting_empty_detection(split_worflow: Workflow):
+def test_splitting_empty_detection(split_workflow: Workflow):
     empty_detections = Detections.empty()
     empty_image = Image.new('RGB', (640, 640))
 
-    result, graph = split_worflow.execute(empty_image, empty_detections)
+    result, graph = split_workflow.execute(empty_image, empty_detections)
     
     assert len(result) == 0, "SplitAgent should return an empty list when there are no detections"
 
@@ -128,8 +154,6 @@ def test_splitting_and_joining_empty_detection():
     empty_detections = Detections.empty()
     empty_image = Image.new('RGB', (640, 640))
     result, graph = workflow.execute(empty_image, empty_detections)
-    print("\n\nRESULT", result)
-    print("LEN", len(result))
     
     assert len(result) == 1
     assert np.array_equal(result[0].data, [None]), "JoinAgent should return null data"
@@ -149,6 +173,8 @@ def filter_split_join_workflow() -> Workflow:
     return workflow
 
 def test_many_split_joins1(count_eggs_image):
+    print("Starting test_many_split_joins1")
+
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"], model=OwlV2()),
         SplitAgent(),
@@ -166,6 +192,8 @@ def test_many_split_joins1(count_eggs_image):
     assert images_are_equal(result[0].image, count_eggs_image), "Image should be the same"
 
 def test_many_split_joins2(count_eggs_image):
+    print("Starting test_many_split_joins2")
+
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"], model=OwlV2()),
         SplitAgent(),
@@ -185,13 +213,17 @@ def test_many_split_joins2(count_eggs_image):
 
 
 def test_many_split_joins3(dense_street_images):
+    print("Starting test_many_split_joins3")
     workflow = Workflow([
         BoundingBoxSelectAgent(classes=["person"]),
         PadCropAgent.from_uniform_padding(padding=25),
+        ConfidenceFilterAgent(max_n=5), # this is to save time
         SplitAgent(),
         BoundingBoxSelectAgent(classes=["head"]),
+        ConfidenceFilterAgent(max_n=1),
         SplitAgent(),
         BoundingBoxSelectAgent(classes=["glasses"], model=OwlV2()),
+        ConfidenceFilterAgent(max_n=1),
         SplitAgent(),
         ClassificationAgent(classes=["sunglasses", "glasses"]),
         JoinAgent(),

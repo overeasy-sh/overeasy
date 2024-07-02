@@ -1,5 +1,6 @@
 from overeasy.types import Detections, DetectionType, DetectionAgent
 from pydantic.dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class PadCropAgent(DetectionAgent):
@@ -31,7 +32,8 @@ class PadCropAgent(DetectionAgent):
             ]
             padded_bboxes.append(padded_bbox)
         
-        dets.xyxy = padded_bboxes
+        dets.xyxy = np.array(padded_bboxes)
+        dets.__post_init__()
         return dets
 
     def __repr__(self):

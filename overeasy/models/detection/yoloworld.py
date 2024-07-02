@@ -4,7 +4,7 @@ from typing import List, Union
 from overeasy.types import BoundingBoxModel, Detections
 import numpy as np
 from PIL import Image
-import urllib.request
+from overeasy.download_utils import atomic_retrieve_and_rename
 from ultralytics import YOLOWorld as YOLOWorld_ultralytics
 
 
@@ -24,7 +24,7 @@ def get_yoloworld_model(model: str) -> str:
     else:
         raise ValueError(f"Model {model} not valid. Valid models are: {valid_models}")
     
-    urllib.request.urlretrieve(url, local_model_path)
+    atomic_retrieve_and_rename(url, local_model_path)
     
     return local_model_path
 

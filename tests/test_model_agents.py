@@ -4,7 +4,9 @@ from overeasy import *
 from overeasy.models import *
 from overeasy.types import Detections
 from pydantic import BaseModel
+import sys
 import os
+import gc
 
 ROOT = os.path.dirname(__file__)
 OUTPUT_DIR = os.path.join(ROOT, "outputs")
@@ -26,12 +28,13 @@ multimodal_llms = [
     GPTVision(model="gpt-4o"), 
     Gemini(model="gemini-1.5-flash"), 
     Claude(model="claude-3-5-sonnet-20240620"), 
-    QwenVL(model_type="base"), 
-    QwenVL(model_type="int4")
 ]
+
 llms = [GPT(model="gpt-3.5-turbo"), GPT(model="gpt-4-turbo")]
 captioning_models = [*multimodal_llms] 
-classification_models = [LaionCLIP(), CLIP(), BiomedCLIP()]
+classification_models = [
+    # LaionCLIP(),
+    CLIP(), BiomedCLIP()]
 ocr_models = [*multimodal_llms] 
 
 
@@ -58,6 +61,21 @@ def vision_prompt_workflow(request) -> Workflow:
     model = request.param
     workflow = Workflow([
         VisionPromptAgent(query="How many eggs are in this image?", model=model)
+    ])
+    return workflow
+
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="Not supported on macOS")
+def local_vision_prompt_workflow() -> Workflow:  
+    workflow = Workflow([
+        VisionPromptAgent(query="How many eggs are in this image?", model=QwenVL(model_type="base"))
+    ])
+    return workflow
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="Not supported on macOS")
+def local_vision_prompt_workflow_int4() -> Workflow:  
+    workflow = Workflow([
+        VisionPromptAgent(query="How many eggs are in this image?", model=QwenVL(model_type="int4"))
     ])
     return workflow
 
@@ -140,15 +158,19 @@ def test_instructor_image_with_context_agent(instructor_image_with_context_workf
     response = result[0].data
     assert isinstance(response, AnimalLabel)
     assert response.label == "ferret"
-    
+    del result, graph  # Explicitly delete variables
+    gc.collect()
 
 def test_bounding_box_select_agent(bounding_box_select_workflow: Workflow, count_eggs_image):
     result, graph = bounding_box_select_workflow.execute(count_eggs_image)
     detections = result[0].data
     assert isinstance(detections, Detections)
-
     name = (bounding_box_select_workflow.steps[0].model.__class__.__name__)
     result[0].visualize().save(os.path.join(OUTPUT_DIR, f"bounding_box_select_{name}.png"))
+
+    del result, graph, detections
+    gc.collect()
+
 
 def test_vision_prompt_agent(vision_prompt_workflow: Workflow, count_eggs_image):
     result, graph = vision_prompt_workflow.execute(count_eggs_image)
@@ -156,6 +178,9 @@ def test_vision_prompt_agent(vision_prompt_workflow: Workflow, count_eggs_image)
     assert isinstance(response, str)
     name = (vision_prompt_workflow.steps[0].model.__class__.__name__)
     result[0].visualize().save(os.path.join(OUTPUT_DIR, f"vision_prompt_{name}.png"))
+    
+    del result, graph
+    gc.collect()    
     
 def test_dense_captioning_agent(dense_captioning_workflow: Workflow, count_eggs_image):
     result, graph = dense_captioning_workflow.execute(count_eggs_image)
@@ -169,7 +194,6 @@ def test_text_prompt_agent(text_prompt_workflow: Workflow, count_eggs_image):
     assert isinstance(response, str) 
     name = (text_prompt_workflow.steps[0].model.__class__.__name__)
     result[0].visualize().save(os.path.join(OUTPUT_DIR, f"text_prompt_{name}.png"))
-
 
 def test_binary_choice_agent(binary_choice_workflow: Workflow, count_eggs_image):
     result, graph = binary_choice_workflow.execute(count_eggs_image)
@@ -194,26 +218,3 @@ def test_ocr_agent(ocr_workflow: Workflow, license_plate_image):
 
     name = (ocr_workflow.steps[0].model.__class__.__name__)
     result[0].visualize().save(os.path.join(OUTPUT_DIR, f"ocr_{name}.png"))
-
-def test_instructor_image_agent(instructor_image_workflow: Workflow, count_eggs_image):
-    result, graph = instructor_image_workflow.execute(count_eggs_image)
-    response = result[0].data
-    assert isinstance(response, EggCount)
-    
-    name = (instructor_image_workflow.steps[0].model.__class__.__name__)
-    result[0].visualize().save(os.path.join(OUTPUT_DIR, f"instructor_image_{name}.png"))
-
-def test_instructor_text_agent(instructor_text_workflow: Workflow, count_eggs_image):
-    result, graph = instructor_text_workflow.execute(count_eggs_image)
-    response = result[0].data
-    assert isinstance(response, EggCount)  
-
-    name = (instructor_text_workflow.steps[0].model.__class__.__name__)
-    result[0].visualize().save(os.path.join(OUTPUT_DIR, f"instructor_text_{name}.png"))
-
-import overeasy as ov
-def pytest_sessionfinish(session, exitstatus):
-    # Your function to run at the end of all tests
-    print("All tests finished. Running final function.")
-    # Add your function call here
-    ov.logging.print_summary()

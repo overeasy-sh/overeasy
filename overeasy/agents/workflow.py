@@ -66,6 +66,7 @@ class Workflow:
 
     # Return leaves of the graph and the graph itself
     def execute(self, input_image: Image.Image, data: Optional[Any] = None) -> Tuple[List[ExecutionNode], ExecutionGraph]:
+        
         if input_image is None:
             raise ValueError("Input image is None")
         elif isinstance(input_image, np.ndarray):
@@ -73,6 +74,8 @@ class Workflow:
         elif not isinstance(input_image, Image.Image):
             raise ValueError("Input image is not a valid image format, must be a PIL.Image")
         
+        input_image = input_image.convert("RGB")
+
         root = ExecutionNode(input_image, data)
         graph = ExecutionGraph(root)
 
@@ -111,9 +114,9 @@ class Workflow:
     def execute_multiple(self, input_images: List[Image.Image]) -> Tuple[List[List[ExecutionNode]], List[ExecutionGraph]]:
         if not all(isinstance(img, Image.Image) for img in input_images):
             raise ValueError("All input images must be of type PIL.Image")
+        # Normalize image format
+        input_images = [img.convert("RGB") for img in input_images]
         
-
-
         all_graphs = [ExecutionGraph(ExecutionNode(img, None)) for img in input_images]
         intermediate_results: List[List[Node]] = [[graph.root] for graph in all_graphs]
 
