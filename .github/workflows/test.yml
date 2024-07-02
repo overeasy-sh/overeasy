@@ -1,0 +1,35 @@
+name: CI
+on:
+  workflow_dispatch:  # Only manual triggering
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12']
+        include:
+          - os: ubuntu-latest
+            architecture: x64
+          - os: macos-latest
+            architecture: x64
+          - os: macos-latest
+            architecture: arm64
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+      - name: Install dependencies
+        run: |
+          poetry install
+      - name: Run tests
+        run: |
+          poetry run pytest
