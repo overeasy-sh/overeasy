@@ -86,8 +86,8 @@ Here's a diagram of this workflow. Each layer in the graph represents a step in 
 <img src="./assets/graph-diagram.png" alt="ExecutionGraph"/> -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/graph-diagram-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/graph-diagram.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/overeasy-sh/overeasy/main/assets/graph-diagram-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/overeasy-sh/overeasy/main/assets/graph-diagram.png">
   <img alt="Diagram" src="./assets/graph-diagram.png">
 </picture>
 
