@@ -1,5 +1,5 @@
 from overeasy.agents import *
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 
 import os as _os
