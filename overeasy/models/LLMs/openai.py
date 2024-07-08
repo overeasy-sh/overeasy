@@ -39,13 +39,14 @@ current_models = [
 
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError, max_tries=6)
-def _prompt(query: str, model: str, client: openai.OpenAI, max_tokens: int = 1024) -> str:
+def _prompt(query: str, model: str, client: openai.OpenAI, temperature: float, max_tokens: int) -> str:
     response = client.chat.completions.create(
         model=model,
         messages=[
             {"role": "user", "content": query}
         ],
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
+        temperature=temperature
     )
 
     result = response.choices[0].message.content
@@ -57,9 +58,14 @@ def _prompt(query: str, model: str, client: openai.OpenAI, max_tokens: int = 102
 
 
 class GPT(LLM):
-    def __init__(self, api_key: Optional[str] = None, model:str = "gpt-3.5-turbo"):
+    def __init__(self, api_key: Optional[str] = None,
+                 model:str = "gpt-3.5-turbo", 
+                 temperature: float = 0.5,
+                 max_tokens: int = 1024):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
         self.client = None
         if self.model not in current_models:
             warnings.warn(f"Model {model} may not be supported. Please provide a valid model.")
@@ -67,7 +73,7 @@ class GPT(LLM):
     def prompt(self, query: str) -> str:
         if self.client is None:
             raise ValueError("Client is not loaded. Please call load_resources() first.")
-        return _prompt(query, self.model, self.client)
+        return _prompt(query, self.model, self.client, self.temperature, self.max_tokens)
     
     def load_resources(self):
         self.client = openai.OpenAI(api_key=self.api_key)
@@ -77,19 +83,17 @@ class GPT(LLM):
 
 class GPTVision(MultimodalLLM, OCRModel, GPT):
     def __init__(self, api_key: Optional[str] = None,
-                 model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o"
+                 model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o",
+                 temperature: float = 0.5,
+                 max_tokens: int = 1024
                  ):
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
         self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
         self.client = None
-    
-    # def load_resources(self):
-    #     self.client = openai.OpenAI(api_key=self.api_key)
-    
-    # def release_resources(self):
-    #     self.client = None
-        
-    def prompt_with_image(self, image: Image.Image, query: str, max_tokens: int = 1024) -> str:
+
+    def prompt_with_image(self, image: Image.Image, query: str) -> str:
         if self.client is None:
             raise ValueError("Client is not loaded. Please call load_resources() first.")
         
@@ -117,7 +121,8 @@ class GPTVision(MultimodalLLM, OCRModel, GPT):
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=max_tokens
+            max_tokens=self.max_tokens,
+            temperature=self.temperature
         )
         
         result = response.choices[0].message.content
