@@ -1,5 +1,6 @@
 import os
 from overeasy import *
+from overeasy.models import GPTVision
 from PIL import Image
 from pydantic import BaseModel
 
@@ -13,7 +14,7 @@ class License(BaseModel):
     last_name: str
 
 workflow = Workflow([
-    InstructorImageAgent(response_model=License, model="gpt-4o")
+    InstructorImageAgent(response_model=License, model=GPTVision())
 ])
 
 image_path = os.path.join(os.path.dirname(__file__), "drivers_license.jpg")

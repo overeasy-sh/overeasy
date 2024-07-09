@@ -21,7 +21,7 @@ class PaliGemma(MultimodalLLM):
     def __init__(self, model_card: str = "google/paligemma-3b-mix-448", device: Optional[str] = None):
         self.model_card = model_card
         if self.model_card not in self.MODEL_OPTIONS:
-            raise ValueError(f"Model {self.model_id} not found. Please select a valid model from {self.MODEL_OPTIONS}.")
+            raise ValueError(f"Model {self.model_card} not found. Please select a valid model from {self.MODEL_OPTIONS}.")
         
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"

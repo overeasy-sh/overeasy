@@ -26,6 +26,8 @@ class Claude(MultimodalLLM, OCRModel):
         super().release_resources()
 
     def prompt_with_image(self, image: Image.Image, query: str) -> str:
+        if self.client is None:
+            raise ValueError("Anthropic client not loaded. Please call load_resources() first.")
         buffered = io.BytesIO()
         image.save(buffered, format="JPEG")
         image_data = base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -56,6 +58,8 @@ class Claude(MultimodalLLM, OCRModel):
         return message.content[0].text  # type: ignore
 
     def prompt(self, query: str) -> str:
+        if self.client is None:
+            raise ValueError("Anthropic client not loaded. Please call load_resources() first.")
         message = self.client.messages.create(
             model=self.model,
             max_tokens=1024,

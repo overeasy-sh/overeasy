@@ -1,8 +1,9 @@
 import pytest
 from PIL import Image
 from overeasy import *
-from overeasy.models import *
 from overeasy.types import Detections
+from overeasy.models import *
+from typing import List
 import numpy as np
 import os
 
@@ -54,8 +55,8 @@ def test_filter_classes_agent(filter_classes_workflow: Workflow, count_eggs_imag
     result, graph = filter_classes_workflow.execute(count_eggs_image)
     detections = result[0].data
     assert isinstance(detections, Detections)
-    result  = list(set(detections.class_names))
-    assert np.array_equal(result, ["a single egg"]), "Filter classes agent failed"
+    uniq_names = list(set(detections.class_names))
+    assert np.array_equal(uniq_names, ["a single egg"]), "Filter classes agent failed"
 
 def test_confidence_filter_agent(confidence_filter_workflow: Workflow, count_eggs_image):
     result, graph = confidence_filter_workflow.execute(count_eggs_image)

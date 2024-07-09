@@ -81,31 +81,6 @@ def test_execute_multiple(split_workflow: Workflow, count_eggs_image):
         for single_layer, multi_layer in zip(single_layers, multi_layers):
             assert len(single_layer) == len(multi_layer), "Each layer should have the same number of nodes"
 
-    
-@pytest.fixture
-def split_workflow() -> Workflow:
-    workflow = Workflow([
-        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
-        SplitAgent(),
-    ])
-    return workflow
-
-@pytest.fixture
-def split_join_workflow() -> Workflow:
-    workflow = Workflow([
-        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
-        SplitAgent(),
-        JoinAgent()
-    ])
-    return workflow
-
-@pytest.fixture
-def no_split_workflow() -> Workflow:
-    workflow = Workflow([
-        BoundingBoxSelectAgent(classes=["a single egg"], model=GroundingDINO()),
-    ])
-    return workflow
-
 def test_split_agent(split_workflow: Workflow, count_eggs_image):
     result, graph = split_workflow.execute(count_eggs_image)
     assert all(isinstance(x.data, Detections) for x in result), "Split didn't return detections"
