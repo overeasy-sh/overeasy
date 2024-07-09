@@ -6,11 +6,10 @@ from typing import Optional
 
 # Make sure to set your HuggingFace token to use PaliGemma
 class PaliGemma(MultimodalLLM):
-    SIZES = [224, 448, 896] # Image sizes the model was trained on
+    SIZES = [224, 448] # Image sizes the model was trained on
     
     MODEL_OPTIONS = (
-        [f"google/paligemma-3b-pt-{size}" for size in SIZES] +
-        [f"google/paligemma-3b-mix-{size}" for size in SIZES] +
+        [f"google/paligemma-3b-mix-{size}" for size in SIZES] + # Should use mix for most cases especially when doing object detection
         [f"google/paligemma-3b-ft-vqav2-{size}" for size in SIZES] +  # Diagram Understanding - 85.64 Accuracy on VQAV2
         [f"google/paligemma-3b-ft-cococap-{size}" for size in SIZES] +  # COCO Captions - 144.6 CIDEr
         [f"google/paligemma-3b-ft-science-qa-{size}" for size in SIZES] +  # Science Question Answering - 95.93 Accuracy on ScienceQA Img subset with no CoT
