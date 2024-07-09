@@ -5,7 +5,7 @@ description = ""
 authors = ["Ani Rahul <anirahul@redshiftai.app>"]
 license = "MIT"
 readme = "README.md"
-
+include = ["overeasy/py.typed"]
 
 [tool.poetry.dependencies]
 python = ">=3.10, <3.13"
@@ -13,7 +13,7 @@ torch = "^2.3.1"
 torchvision = "^0.18.0"
 numpy = "^1.24.3"
 opencv-python-headless = "^4.7.0"
-Pillow = "^9.4.0"
+Pillow = "^10.0.0"
 requests = "^2.32.0"
 matplotlib = "^3.8.1"
 anthropic = "^0.27.0"
@@ -43,6 +43,10 @@ progressbar = "^2.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.0"
+mypy = "^1.0.0"
+types-requests = "^2.28.11"
+types-Pillow = "^10.0.0"
+types-tabulate = "^0.9.0"
 
 [build-system]
 requires = ["poetry-core"]
