@@ -32,12 +32,14 @@ def _visualize_layer(layer: List[Node]) -> List[Tuple[Optional[Image.Image], str
         images = [(x.image, str(x.data)) if isinstance(x, ExecutionNode) else (None, "None") for x in layer]
     return images
 
+# Can ignore JoinAgents as they are handled earlier in the flow
 def handle_node(node: ExecutionNode, agent: Agent) -> List[ExecutionNode]:    
     if isinstance(agent, SplitAgent):
         return agent.execute(node)
-    elif isinstance(agent, ImageAgent):
-        return [agent.execute(node.image)]
-    elif isinstance(agent, TextAgent) or isinstance(agent, DetectionAgent) or isinstance(agent, DataAgent):
+    # Superclass so we dont have to check for children
+    elif isinstance(agent, ImageToDataAgent) :
+        return [ExecutionNode(node.image, agent.execute(node.image))]
+    elif isinstance(agent, DataAgent):
         return [ExecutionNode(node.image, agent.execute(node.data))]
     else:
         raise ValueError(f"Agent {agent} is not a valid agent type")

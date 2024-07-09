@@ -21,7 +21,9 @@ __all__ = [
     "ExecutionGraph",
     "Model",
     "Agent",
-    "ImageAgent",
+    "ImageDetectionAgent",
+    "ImageToTextAgent",
+    "ImageToDataAgent",
     "DetectionAgent",
     "TextAgent",
     "DataAgent",
@@ -217,38 +219,32 @@ class ClassificationModel(Model):
 class Agent(ABC):
     pass
     
-class ImageAgent(Agent):
+    
+class ImageToDataAgent(Agent):
     @abstractmethod
-    def _execute(self, image: Image.Image) -> ExecutionNode:
+    def _execute(self, image: Image.Image) -> Any:
         pass
     
     @log_time
-    def execute(self, image: Image.Image) -> ExecutionNode:
+    def execute(self, image: Image.Image) -> Any:
         if not isinstance(image, Image.Image):
-            raise ValueError("ImageAgent received non-image data")
-        return self._execute(image)
+            raise ValueError(f"{self.__class__.__name__} received non-image data")
+        output = self._execute(image)
+        self._validate_output(output)
+        return output
     
-class DetectionAgent(Agent):
-    @abstractmethod
-    def _execute(self, data: Detections) -> Detections:
+    def _validate_output(self, output: Any) -> None:
         pass
-    
-    @log_time
-    def execute(self, data: Detections) -> Detections:
-        if not isinstance(data, Detections):
-            raise ValueError("DetectionAgent received non-detection data")
-        return self._execute(data)
-    
-class TextAgent(Agent):
-    @abstractmethod
-    def _execute(self, data: str) -> Any:
-        pass
-    
-    @log_time
-    def execute(self, data: str) -> Any:
-        if not isinstance(data, str):
-            raise ValueError("TextAgent received non-string data")
-        return self._execute(data)
+
+class ImageDetectionAgent(ImageToDataAgent):    
+    def _validate_output(self, output: Any) -> None:
+        if not isinstance(output, Detections):
+            raise ValueError(f"{self.__class__.__name__} returned non-detection data")
+
+class ImageToTextAgent(ImageToDataAgent):
+    def _validate_output(self, output: Any) -> None:
+        if not isinstance(output, str):
+            raise ValueError(f"{self.__class__.__name__} returned non-string data")
 
 class DataAgent(Agent):
     @abstractmethod
@@ -257,4 +253,25 @@ class DataAgent(Agent):
     
     @log_time
     def execute(self, data: Any) -> Any:
-        return self._execute(data)
+        self._validate_input(data)
+        output = self._execute(data)
+        self._validate_output(output)
+        return output
+
+    def _validate_input(self, data: Any) -> None:
+        pass
+
+    def _validate_output(self, output: Any) -> None:
+        pass
+class DetectionAgent(DataAgent):
+    def _validate_input(self, data: Any) -> None:
+        if not isinstance(data, Detections):
+            raise ValueError("DetectionAgent received non-detection data")
+
+    def _validate_output(self, output: Any) -> None:
+        if not isinstance(output, Detections):
+            raise ValueError("DetectionAgent returned non-detection data")
+class TextAgent(DataAgent):
+    def _validate_input(self, data: Any) -> None:
+        if not isinstance(data, str):
+            raise ValueError("TextAgent received non-string data")

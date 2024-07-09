@@ -1,10 +1,10 @@
 from PIL import Image
 from pydantic.dataclasses import dataclass
 from typing import Tuple
-from overeasy.types import ExecutionNode, ImageAgent, Detections, DetectionType
+from overeasy.types import ExecutionNode, ImageDetectionAgent, Detections, DetectionType
 import numpy as np
 
-class SplitCropAgent(ImageAgent):
+class SplitCropAgent(ImageDetectionAgent):
     # WE HAVE PYDANTIC AT HOME
     def __init__(self, split: Tuple[int, int]):
         if len(split) != 2:
@@ -18,7 +18,7 @@ class SplitCropAgent(ImageAgent):
         self.columns = split[1]
 
 
-    def _execute(self, image: Image.Image) -> ExecutionNode:
+    def _execute(self, image: Image.Image) -> Detections:
         # Convert PIL Image to numpy array
         width, height = image.width, image.height
         
@@ -56,8 +56,7 @@ class SplitCropAgent(ImageAgent):
             detection_type=DetectionType.BOUNDING_BOX
         )
 
-        # Convert numpy array back to PIL Image
-        return ExecutionNode(image, det)
+        return det
     
     def __repr__(self):
         return f"{self.__class__.__name__}(split={self.split})"
