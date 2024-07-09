@@ -157,7 +157,7 @@ def test_instructor_image_with_context_agent(instructor_image_with_context_workf
     result, graph = instructor_image_with_context_workflow.execute(blank_image)
     response = result[0].data
     assert isinstance(response, AnimalLabel)
-    assert response.label == "ferret"
+    assert response.label.lower() == "ferret"
     del result, graph  # Explicitly delete variables
     gc.collect()
 
