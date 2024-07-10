@@ -4,6 +4,6 @@ from overeasy.models import *
 __version__ = "0.2.6"
 
 
+from overeasy.dirs import ROOT as _ROOT
 import os as _os
-ROOT = _os.path.expanduser("~/.overeasy")
-_os.makedirs(ROOT, exist_ok=True)
+_os.makedirs(_ROOT, exist_ok=True)

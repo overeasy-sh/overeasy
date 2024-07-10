@@ -264,6 +264,10 @@ class DataAgent(Agent):
     def _validate_output(self, output: Any) -> None:
         pass
 class DetectionAgent(DataAgent):
+    @abstractmethod
+    def _execute(self, data: Detections) -> Detections:
+        pass
+    
     def _validate_input(self, data: Any) -> None:
         if not isinstance(data, Detections):
             raise ValueError("DetectionAgent received non-detection data")
@@ -272,6 +276,10 @@ class DetectionAgent(DataAgent):
         if not isinstance(output, Detections):
             raise ValueError("DetectionAgent returned non-detection data")
 class TextAgent(DataAgent):
+    @abstractmethod
+    def _execute(self, data: str) -> Any:
+        pass
+    
     def _validate_input(self, data: Any) -> None:
         if not isinstance(data, str):
             raise ValueError("TextAgent received non-string data")

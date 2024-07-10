@@ -10,7 +10,7 @@ import gradio as gr
 from math import fabs, sqrt
 from tqdm import tqdm
 from dataclasses import field, dataclass
-import os
+from overeasy.dirs import FAVICON_PATH
 from typing import Optional, Any, Dict, Union
 
 def _visualize_layer(layer: List[Node]) -> List[Tuple[Optional[Image.Image], str]]:
@@ -46,7 +46,6 @@ def handle_node(node: ExecutionNode, agent: Agent) -> List[ExecutionNode]:
     
  
 
-FAVICON_PATH = os.path.join(os.path.dirname(__file__), "./assets/favicon.ico")
 @dataclass(frozen=True)
 class Workflow:
     steps: List[Agent]

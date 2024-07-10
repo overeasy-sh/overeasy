@@ -99,7 +99,7 @@ def text_prompt_workflow(request) -> Workflow:
 @pytest.fixture
 def binary_choice_workflow() -> Workflow:
     workflow = Workflow([
-        BinaryChoiceAgent(query="Are there more than 5 eggs in this image?", model=GPTVision())
+        BinaryChoiceAgent(query="Are there more than 5 eggs in this image?", model=GPTVision(temperature=0.0))
     ])
     return workflow
 
@@ -197,8 +197,8 @@ def test_text_prompt_agent(text_prompt_workflow: Workflow, count_eggs_image):
 
 def test_binary_choice_agent(binary_choice_workflow: Workflow, count_eggs_image):
     result, graph = binary_choice_workflow.execute(count_eggs_image)
-    response = result[0].data
-    assert isinstance(response, Detections)
+    response : str = result[0].data # type: ignore
+    assert response.lower() == "yes"
     # assert response.class_names[0] == "yes", "Incorrect binary choice"
     name = (binary_choice_workflow.steps[0].model.__class__.__name__)
     result[0].visualize().save(os.path.join(OUTPUT_DIR, f"binary_choice_{name}.png"))
