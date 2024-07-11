@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from lxml import html
-import multiprocessing
+import os
 
 def _is_valid_xml_char(c):
     codepoint = ord(c)
@@ -25,6 +25,7 @@ def _sanitize_string(s):
 
 def _get_page_source(url):
     options = Options()
+    options.add_argument('--headless')
     service = Service(ChromeDriverManager().install())
     
     with webdriver.Chrome(service=service, options=options) as driver:
@@ -96,6 +97,15 @@ def _process_webpage(url):
     
     for button in tree.xpath('//button[@aria-label="Download"]'):
         button.getparent().remove(button)
+    
+    dark_mode_path = os.path.join(os.path.dirname(__file__), 'dark_mode.txt')
+    with open(dark_mode_path, 'r') as f:
+        dark_mode_content = f.read()
+    
+    # Append dark_mode_content as the last tag before </html>
+    html_root = tree.getroottree().getroot()
+    dark_mode_element = html.fromstring(dark_mode_content)
+    html_root.append(dark_mode_element)
 
     return html.tostring(tree, pretty_print=True, encoding='utf-8').decode('utf-8')
 
@@ -125,7 +135,3 @@ def scrape_and_inline_to_file(url, output_file='gradio_visualization.html'):
     processed_html = _process_webpage(url)
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(processed_html)
-
-
-if __name__ == '__main__':
-    multiprocessing.freeze_support() 

@@ -12,7 +12,6 @@ from overeasy.dirs import FAVICON_PATH
 from typing import Optional, Any, Dict, Union
 from io import StringIO
 from overeasy.agents.scrape import scrape_and_inline_to_buffer
-import re
 import time
 import threading
 import sys
