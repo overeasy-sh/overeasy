@@ -1,5 +1,3 @@
-
-from re import split
 from overeasy.types import *
 from overeasy.agents import SplitAgent, JoinAgent
 from overeasy.visualize_utils import annotate
@@ -12,6 +10,12 @@ from tqdm import tqdm
 from dataclasses import field, dataclass
 from overeasy.dirs import FAVICON_PATH
 from typing import Optional, Any, Dict, Union
+from io import StringIO
+from overeasy.agents.scrape import scrape_and_inline_to_buffer
+import re
+import time
+import threading
+import sys
 
 def _visualize_layer(layer: List[Node]) -> List[Tuple[Optional[Image.Image], str]]:
     images: List[Tuple[Optional[Image.Image], str]] = []
@@ -43,9 +47,6 @@ def handle_node(node: ExecutionNode, agent: Agent) -> List[ExecutionNode]:
         return [ExecutionNode(node.image, agent.execute(node.data))]
     else:
         raise ValueError(f"Agent {agent} is not a valid agent type")
-    
- 
-
 @dataclass(frozen=True)
 class Workflow:
     steps: List[Agent]
@@ -172,7 +173,7 @@ class Workflow:
         
         return steps
 
-    def visualize(self, graph: ExecutionGraph, share: bool = False):
+    def visualize(self, graph: ExecutionGraph, share: bool = False, prevent_thread_lock: bool = False):
         steps = self.to_steps(graph)
         css = """
         .gradio-container .single-image {
@@ -218,6 +219,47 @@ class Workflow:
                                 pass
                             
 
-        demo.launch(favicon_path=FAVICON_PATH, share=share)
+        demo.launch(favicon_path=FAVICON_PATH, share=share, prevent_thread_lock=prevent_thread_lock)
 
+    def visualize_to_html_string(self, graph: ExecutionGraph):
+        port = None
+        output_buffer = StringIO()
 
+        def run_gradio():
+            original_stdout = sys.stdout
+            try:
+                sys.stdout = output_buffer
+                self.visualize(graph, prevent_thread_lock=True)
+            finally:
+                sys.stdout = original_stdout
+
+        gradio_thread = threading.Thread(target=run_gradio)
+        gradio_thread.start()
+
+        # Monitor the output buffer for the "Running on" string
+        start_time = time.time()
+        url = None
+        while time.time() - start_time < 30:  # Wait for up to 30 seconds
+            output_buffer.seek(0)
+            for line in output_buffer:
+                print("thread:", line.strip())
+                if "Running on local URL:" in line:
+                    url = line.split("Running on local URL:")[1].strip()
+                    break
+            if url:
+                break
+            time.sleep(0.1)  # Short sleep to prevent busy-waiting
+        
+        if url:
+            buffer = scrape_and_inline_to_buffer(url)
+            gradio_thread.join()
+            return buffer
+        else:
+            gradio_thread.join()
+            raise RuntimeError("Failed to determine Gradio server URL")
+
+        
+    def visualize_to_file(self, graph: ExecutionGraph, file_path: str):
+        html_string = self.visualize_to_html_string(graph)
+        with open(file_path, "w") as f:
+            f.write(html_string)
