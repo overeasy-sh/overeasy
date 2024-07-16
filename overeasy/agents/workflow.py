@@ -221,11 +221,10 @@ class Workflow:
         demo.launch(favicon_path=FAVICON_PATH, share=share, prevent_thread_lock=prevent_thread_lock)
 
     def visualize_to_html_string(self, graph: ExecutionGraph):
-        port = None
         output_buffer = StringIO()
+        original_stdout = sys.stdout
 
         def run_gradio():
-            original_stdout = sys.stdout
             try:
                 sys.stdout = output_buffer
                 self.visualize(graph, prevent_thread_lock=True)
@@ -233,12 +232,13 @@ class Workflow:
                 sys.stdout = original_stdout
 
         gradio_thread = threading.Thread(target=run_gradio)
+        gradio_thread.daemon = True
         gradio_thread.start()
 
         # Monitor the output buffer for the "Running on" string
         start_time = time.time()
         url = None
-        while time.time() - start_time < 30:  # Wait for up to 30 seconds
+        while time.time() - start_time < 10:  # Wait for up to 30 seconds
             output_buffer.seek(0)
             for line in output_buffer:
                 print("thread:", line.strip())
@@ -248,10 +248,11 @@ class Workflow:
             if url:
                 break
             time.sleep(0.1)  # Short sleep to prevent busy-waiting
-        
+            
+        sys.stdout = original_stdout
         if url:
-            buffer = scrape_and_inline_to_buffer(url)
             gradio_thread.join()
+            buffer = scrape_and_inline_to_buffer(url)
             return buffer
         else:
             gradio_thread.join()
