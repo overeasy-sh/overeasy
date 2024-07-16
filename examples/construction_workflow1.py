@@ -18,7 +18,7 @@ workflow = Workflow([
     JoinAgent(),
 ])
 
-image_path = os.path.join(os.path.dirname(__file__), "construction_workers.jpg")
+image_path = os.path.join(os.path.dirname(__file__), "construction.jpg")
 image = Image.open(image_path)
 result, graph = workflow.execute(image)
 workflow.visualize(graph)

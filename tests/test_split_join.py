@@ -16,7 +16,7 @@ def count_eggs_image():
 
 @pytest.fixture
 def construction_image():
-    image_path = os.path.join(ROOT, "../", "examples", "construction_workers.jpg")
+    image_path = os.path.join(ROOT, "../", "examples", "construction.jpg")
     return Image.open(image_path)
 
 @pytest.fixture
