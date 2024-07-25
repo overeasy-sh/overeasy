@@ -1,5 +1,5 @@
 import os
-from overeasy import Workflow, BoundingBoxSelectAgent, ToClassificationAgent, JoinAgent, SplitAgent, InstructorImageAgent, ClassMapAgent
+from overeasy import Workflow, BoundingBoxSelectAgent, ToClassificationAgent, JoinAgent, SplitAgent, InstructorImageAgent, YOLOWorld
 from pydantic import BaseModel
 from PIL import Image
 
@@ -10,7 +10,7 @@ class PPE(BaseModel):
 
 
 workflow = Workflow([
-    BoundingBoxSelectAgent(classes=["person"]),
+    BoundingBoxSelectAgent(classes=["person"], model=YOLOWorld()),
     SplitAgent(),
     InstructorImageAgent(response_model=PPE),
     ToClassificationAgent(fn=lambda x: "has ppe" if x.hardhat else "no ppe"),

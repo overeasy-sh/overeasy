@@ -15,7 +15,9 @@ def encode_image_to_base64(image: Image.Image) -> str:
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 current_models = [
+    "gpt-4o-mini"
     "gpt-4o",
+    "gpt-4o-mini-2024-07-18"
     "gpt-4o-2024-05-13",
     "gpt-4-turbo",
     "gpt-4-turbo-2024-04-09",
@@ -83,7 +85,7 @@ class GPT(LLM):
 
 class GPTVision(MultimodalLLM, OCRModel, GPT):
     def __init__(self, api_key: Optional[str] = None,
-                 model : Literal["gpt-4o", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o",
+                 model : Literal["gpt-4o", "gpt-4o-mini", "gpt-4o-2024-05-13", "gpt-4-turbo", "gpt-4-turbo-2024-04-09"] = "gpt-4o",
                  temperature: float = 0.5,
                  max_tokens: int = 1024
                  ):

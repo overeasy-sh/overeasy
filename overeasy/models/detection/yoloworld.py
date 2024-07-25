@@ -11,15 +11,30 @@ from ultralytics import YOLOWorld as YOLOWorld_ultralytics
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-valid_models = ["yolov8s-worldv2", "yolov8m-worldv2", "yolov8l-worldv2", "yolov8s-world", "yolov8m-world", "yolov8l-world"]
+valid_models = [
+    "yolov8l-world-cc3m.pt",
+    "yolov8l-world.pt",
+    "yolov8l-worldv2-cc3m.pt",
+    "yolov8l-worldv2.pt",
+    "yolov8m-world.pt",
+    "yolov8m-worldv2.pt",
+    "yolov8s-world.pt",
+    "yolov8s-worldv2.pt",
+    "yolov8x-world.pt",
+    "yolov8x-worldv2.pt"
+]
+
 def get_yoloworld_model(model: str) -> str:
-    local_model_path = os.path.join(os.path.expanduser("~/.overeasy"), model + ".pt")
+    if not model.endswith(".pt"):
+        model = model + ".pt"
+
+    local_model_path = os.path.join(os.path.expanduser("~/.overeasy"), model)
     if os.path.exists(local_model_path):
         return local_model_path
     
     url = None
     if model in valid_models:
-        url = f"https://github.com/ultralytics/assets/releases/download/v8.2.0/{model}.pt"
+        url = f"https://github.com/ultralytics/assets/releases/download/v8.2.0/{model}"
     else:
         raise ValueError(f"Model {model} not valid. Valid models are: {valid_models}")
     
@@ -29,7 +44,7 @@ def get_yoloworld_model(model: str) -> str:
 
 # Load a pretrained YOLOv8s-worldv2 model
 class YOLOWorld(BoundingBoxModel):
-    def __init__(self, model: str = "yolov8l-worldv2"):
+    def __init__(self, model: str = "yolov8l-worldv2-cc3m"):
         self.model_name = model
     
     def load_resources(self):

@@ -1,7 +1,7 @@
 from overeasy.agents import *
 from overeasy.models import *
 
-__version__ = "0.2.10"
+__version__ = "0.2.11"
 
 
 from overeasy.dirs import ROOT as _ROOT
