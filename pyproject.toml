@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "overeasy"
-version = "0.2.11"
+version = "0.2.12"
 description = ""
 authors = ["Ani Rahul <anirahul@redshiftai.app>"]
 license = "MIT"
@@ -18,7 +18,7 @@ requests = "^2.32.0"
 matplotlib = "^3.8.1"
 anthropic = "^0.27.0"
 tabulate = "^0.9.0"
-transformers = "^4.42.2"
+transformers = "4.36.2"
 ultralytics = "^8.2.0"
 supervision = "^0.18.0"
 pydantic = ">=2.7.4,<2.8"
@@ -40,6 +40,9 @@ pyarrow = "^16.1.0"
 backoff = "^2.2.1"
 openai = "^1.34.0"
 progressbar = "^2.5"
+mmdet = "^3.3.0"
+nltk = "^3.8.1"
+fairscale = "^0.4.13"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.0"

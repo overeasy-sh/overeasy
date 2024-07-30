@@ -1,6 +1,5 @@
 from PIL import Image
 from overeasy.types import MultimodalLLM
-from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
 import torch
 from typing import Optional
 
@@ -29,6 +28,7 @@ class PaliGemma(MultimodalLLM):
         self.processor = None
 
     def load_resources(self):
+        from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
         self.model = PaliGemmaForConditionalGeneration.from_pretrained(self.model_card).to(self.device)
         self.processor = AutoProcessor.from_pretrained(self.model_card)
 
