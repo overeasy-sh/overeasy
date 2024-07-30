@@ -222,7 +222,7 @@ class GroundingDINO(BoundingBoxModel):
     text_threshold: float
 
     def __init__(
-        self, type: GroundingDINOModel = GroundingDINOModel.mmdet_SwinL,
+        self, type: GroundingDINOModel = GroundingDINOModel.SwinB,
         box_threshold: float = 0.35,
         text_threshold: float = 0.25,
     ):

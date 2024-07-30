@@ -13,7 +13,6 @@ OUTPUT_DIR = os.path.join(ROOT, "outputs")
 
 bounding_box_models = [    
     DETIC(),
-    GroundingDINO(type=GroundingDINOModel.Pretrain_1_8M),
     GroundingDINO(type=GroundingDINOModel.SwinB),
     GroundingDINO(type=GroundingDINOModel.SwinT),
     YOLOWorld(model="yolov8s-worldv2"),
