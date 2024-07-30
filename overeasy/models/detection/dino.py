@@ -262,7 +262,7 @@ class GroundingDINO(BoundingBoxModel):
             res = self.grounding_dino_model(
                 inputs=image,
                 out_dir='outputs',
-                texts='. '.join(classes),
+                texts=[tuple(classes)],
                 pred_score_thr=box_threshold,
                 batch_size=1,
                 show=False,
