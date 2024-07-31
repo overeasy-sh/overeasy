@@ -296,6 +296,51 @@ class GroundingDINO(BoundingBoxModel):
         )
 
         return dets
+    
+    def detect_multiple_mmdet(self, images: List[np.ndarray], class_groups: List[List[str]], box_threshold) -> List[Detections]:
+        batch_size = len(images)
+        
+        res = self.grounding_dino_model(
+            inputs=images,
+            out_dir='outputs',
+            texts=[tuple(classes) for classes in class_groups],
+            pred_score_thr=box_threshold,
+            batch_size=batch_size,
+            show=False,
+            no_save_vis=True,
+            no_save_pred=True,
+            print_result=False,
+            custom_entities=False,
+            tokens_positive=None
+        )
+        
+        all_detections = []
+        
+        for i, (preds, classes) in enumerate(zip(res["predictions"], class_groups)):
+            scores = np.array(preds['scores'])
+            class_ids = np.array(preds['labels'])
+            bboxes = np.array(preds['bboxes'])
+            
+            slicer = np.where(scores > box_threshold)
+            dets = Detections(
+                xyxy=bboxes[slicer],
+                class_ids=class_ids[slicer],
+                confidence=scores[slicer],
+                classes=classes,
+                detection_type=DetectionType.BOUNDING_BOX
+            )
+            
+            all_detections.append(dets)
+    
+        return all_detections
+
+    def detect_multiple(self, images: List[np.ndarray], class_groups: List[List[str]], box_threshold) -> List[Detections]:
+        cv2_images = [cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR) if isinstance(image, Image.Image) else image for image in images]
+        
+        if self.model_type.value.startswith("mmdet"):
+            return self.detect_multiple_mmdet(cv2_images, class_groups, box_threshold)
+        
+        raise ValueError("Unsupported model type")
 
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=None, text_threshold=None) -> Detections:
         if box_threshold is None:
@@ -320,6 +365,4 @@ class GroundingDINO(BoundingBoxModel):
         sv_detection = sv_detection[valid_indexes]
         detections = Detections.from_supervision_detection(sv_detection, classes=classes)
  
-
         return detections
-
