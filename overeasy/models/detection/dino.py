@@ -28,11 +28,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class GroundingDINOModel(Enum):
     SwinB = "swinb"
     SwinT = "swint"
-    mmdet_SwinL_zero = "mmdet_swinl_zero"
-    mmdet_SwinB_zero = "mmdet_swinb_zero"
-    mmdet_SwinL = "mmdet_swinl"
-    mmdet_SwinB = "mmdet_swinb"
-
 
 mapping = {
     "swinb": {
@@ -61,52 +56,6 @@ mapping = {
     }
 
 }
-
-def download_mmdet_config(model: GroundingDINOModel):
-    from transformers import BertConfig, BertModel
-    from transformers import AutoTokenizer
-    import nltk
-
-    config = BertConfig.from_pretrained("bert-base-uncased")
-    _ = BertModel.from_pretrained("bert-base-uncased", add_pooling_layer=False, config=config)
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-
-    to_store = os.path.expanduser("~/nltk_data")
-    if not os.path.exists(to_store):
-        os.makedirs(to_store)
-    nltk.download('punkt', download_dir=to_store)
-    nltk.download('averaged_perceptron_tagger', download_dir=to_store)
-
-    OVEREASY_CACHE_DIR = os.path.expanduser("~/.overeasy")
-    GROUNDING_DINO_CACHE_DIR = os.path.join(OVEREASY_CACHE_DIR, "groundingdino_mmdet")
-    
-    if not os.path.exists(GROUNDING_DINO_CACHE_DIR):
-        os.makedirs(GROUNDING_DINO_CACHE_DIR)
-
-    model_key = model.value
-    if model_key not in mapping:
-        raise ValueError(f"Unsupported model type: {model_key}")
-
-
-    config_path = os.path.join(GROUNDING_DINO_CACHE_DIR, mapping[model.value]["config"])
-
-    checkpoint_url = mapping[model_key]["checkpoint"]
-    checkpoint_file = os.path.basename(checkpoint_url)
-    checkpoint_path = os.path.join(GROUNDING_DINO_CACHE_DIR, checkpoint_file)
-
-    if not os.path.exists(checkpoint_path):
-        atomic_retrieve_and_rename(checkpoint_url, checkpoint_path)
-
-    if not os.path.exists(config_path):
-        # Clone mmdetection repository
-        import subprocess
-        mmdet_repo_url = "https://github.com/AnirudhRahul/mmdetection"
-        mmdet_repo_path = os.path.join(GROUNDING_DINO_CACHE_DIR, "mmdetection")
-        if not os.path.exists(mmdet_repo_path):
-            subprocess.run(["git", "clone", mmdet_repo_url, mmdet_repo_path], check=True)
-    
-    return config_path, checkpoint_path
-
 
 def download_and_cache_grounding_dino(model: GroundingDINOModel):
     OVEREASY_CACHE_DIR = os.path.expanduser("~/.overeasy")
@@ -137,19 +86,8 @@ def download_and_cache_grounding_dino(model: GroundingDINOModel):
     return config_path, checkpoint_path
 
 
-def load_mmdet_grounding_dino(model: GroundingDINOModel):
-    from mmdet.apis import DetInferencer
-
-    config_path, checkpoint_path = download_mmdet_config(model)
-    inferencer =  DetInferencer(model=config_path, weights=checkpoint_path, device=DEVICE, palette='none', show_progress=False )
-    inferencer.model.test_cfg.chunked_size = -1
-    return inferencer
-
 
 def load_grounding_dino(model: GroundingDINOModel):
-    if model.value.startswith("mmdet"):
-        return load_mmdet_grounding_dino(model)
-
     config_path, checkpoint_path = download_and_cache_grounding_dino(model)
     
     instantiate = lambda: Model(
@@ -251,96 +189,10 @@ class GroundingDINO(BoundingBoxModel):
     def release_resources(self):
         self.grounding_dino_model = None
 
-    def detect_mmdet(self, image: np.ndarray, classes: List[str], box_threshold) -> Detections:
-        import sys
-        import io
-
-        # Redirect stdout to a StringIO object
-        original_stdout = sys.stdout
-        sys.stdout = io.StringIO()
-        try:
-            res = self.grounding_dino_model(
-                inputs=image,
-                out_dir='outputs',
-                texts=[tuple(classes)],
-                pred_score_thr=box_threshold,
-                batch_size=1,
-                show=False,
-                no_save_vis=True,
-                no_save_pred=True,
-                print_result=False,
-                custom_entities=False,
-                tokens_positive=None
-            )
-        except Exception as e:
-            # If there's an error, print the captured stdout
-            print("Error occurred during model inference:")
-            print(sys.stdout.getvalue())
-            raise e
-        finally:
-            # Restore the original stdout
-            sys.stdout = original_stdout
-
-        preds = res["predictions"][0]
-        scores = np.array(preds['scores'])
-        class_ids = np.array(preds['labels'])
-        bboxes = np.array(preds['bboxes'])
+    # def detect_multiple(self, images: List[np.ndarray], class_groups: List[List[str]], box_threshold) -> List[Detections]:
+    #     cv2_images = [cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR) if isinstance(image, Image.Image) else image for image in images]
         
-        slicer = np.where(scores > box_threshold)
-        dets = Detections(
-            xyxy=bboxes[slicer],
-            class_ids=class_ids[slicer],
-            confidence=scores[slicer],
-            classes=classes,
-            detection_type=DetectionType.BOUNDING_BOX
-        )
-
-        return dets
-    
-    def detect_multiple_mmdet(self, images: List[np.ndarray], class_groups: List[List[str]], box_threshold) -> List[Detections]:
-        batch_size = len(images)
-        
-        res = self.grounding_dino_model(
-            inputs=images,
-            out_dir='outputs',
-            texts=[tuple(classes) for classes in class_groups],
-            pred_score_thr=box_threshold,
-            batch_size=batch_size,
-            show=False,
-            no_save_vis=True,
-            no_save_pred=True,
-            print_result=False,
-            custom_entities=False,
-            tokens_positive=None
-        )
-        
-        all_detections = []
-        
-        for i, (preds, classes) in enumerate(zip(res["predictions"], class_groups)):
-            scores = np.array(preds['scores'])
-            class_ids = np.array(preds['labels'])
-            bboxes = np.array(preds['bboxes'])
-            
-            slicer = np.where(scores > box_threshold)
-            dets = Detections(
-                xyxy=bboxes[slicer],
-                class_ids=class_ids[slicer],
-                confidence=scores[slicer],
-                classes=classes,
-                detection_type=DetectionType.BOUNDING_BOX
-            )
-            
-            all_detections.append(dets)
-    
-        return all_detections
-
-    def detect_multiple(self, images: List[np.ndarray], class_groups: List[List[str]], box_threshold) -> List[Detections]:
-        cv2_images = [cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR) if isinstance(image, Image.Image) else image for image in images]
-        
-        if self.model_type.value.startswith("mmdet"):
-            return self.detect_multiple_mmdet(cv2_images, class_groups, box_threshold)
-        
-        raise ValueError("Unsupported model type")
+    #     raise ValueError("Unsupported model type")
 
     def detect(self, image: Union[np.ndarray, Image.Image], classes: List[str], box_threshold=None, text_threshold=None) -> Detections:
         if box_threshold is None:
@@ -351,9 +203,6 @@ class GroundingDINO(BoundingBoxModel):
             
         if isinstance(image, Image.Image):
             image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-        if self.model_type.value.startswith("mmdet"):
-            return self.detect_mmdet(image, classes, box_threshold)
 
         sv_detection = self.grounding_dino_model.predict_with_classes(
             image=image,
