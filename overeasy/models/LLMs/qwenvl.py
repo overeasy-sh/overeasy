@@ -1,5 +1,4 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers.generation import GenerationConfig
 from PIL import Image
 import tempfile
 from overeasy.types import MultimodalLLM

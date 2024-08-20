@@ -3,7 +3,6 @@ from re import T
 import cv2
 import numpy as np
 import torch
-from groundingdino.util.inference import Model
 from PIL import Image
 from typing import List, Union
 from overeasy.types import Detections, DetectionType
@@ -12,7 +11,7 @@ from overeasy.types import BoundingBoxModel
 import warnings
 import sys, io
 from overeasy.download_utils import atomic_retrieve_and_rename
-
+from typing import Any
 
 # Ignore the specific UserWarning about torch.meshgrid
 warnings.filterwarnings("ignore", message="torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument.", category=UserWarning, module='torch.functional')
@@ -88,6 +87,8 @@ def download_and_cache_grounding_dino(model: GroundingDINOModel):
 
 
 def load_grounding_dino(model: GroundingDINOModel):
+    from groundingdino.util.inference import Model
+
     config_path, checkpoint_path = download_and_cache_grounding_dino(model)
     
     instantiate = lambda: Model(
@@ -155,7 +156,7 @@ def combine_detections(detections_list: List[Detections], classes: List[str], ov
     )
 
 class GroundingDINO(BoundingBoxModel):
-    grounding_dino_model: Model
+    grounding_dino_model: Any
     box_threshold: float
     text_threshold: float
 
@@ -171,10 +172,8 @@ class GroundingDINO(BoundingBoxModel):
     def load_resources(self):
         # if DEVICE.type != "cuda":
         #     warnings.warn("CUDA not available. GroundingDINO may run slowly.")
-        if self.model_type.value.startswith("mmdet"):
-            download_mmdet_config(self.model_type)
-        else:
-            download_and_cache_grounding_dino(self.model_type)
+
+        download_and_cache_grounding_dino(self.model_type)
         original_stdout = sys.stdout
         sys.stdout = io.StringIO()
         try:
